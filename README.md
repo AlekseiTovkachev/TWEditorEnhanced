@@ -1,4 +1,4 @@
-TWEditor - Version 3.0.1
+TWEditor - Version 4.0.0
 ------------------------
 
 Overview
@@ -27,9 +27,9 @@ Installation
 
 This version of the save game editor assumes you have installed the Enhanced Edition of The Witcher.  Using this version of the editor with the original version of The Witcher can result in inventory errors.
 
-To install this utility, place the TWEditor.jar file into a directory of your choice.  To run the utility, create a program shortcut and specify 
+To install this utility, place the TWEditorEnhanced-4.0.0.jar file into a directory of your choice.  To run the utility, create a program shortcut and specify 
 
-  `javaw -Xmx256m -jar TWEditor.jar`
+  `javaw -Xmx256m -jar TWEditorEnhanced-4.0.0.jar`
 
 as the program to run.  Set the Start Directory to the directory where you extracted the jar file.  A sample program shortcut is included.  The `-Xmx256m` argument specifies the maximum heap size in megabytes (the example specifies a heap of 256Mb).  You can increase the size if you run out of space processing very large saves.  Note that Windows will start swapping if the Java heap size exceeds the amount of available storage and this will significantly impact performance.  The java virtual machine will fail to start if the requested heap size is too large.
 
@@ -37,13 +37,13 @@ The Sun Java 1.8 runtime is required.  You can download JRE 1.8 from http://java
 
 The game install directory is located by scanning the Windows registry.  If this scan fails or if the game files are located in a different directory, you can specify the game install directory when starting the editor.  This is done by specifying -DTW.install.path="<path>" on the java command line where <path> is the directory containing dialog.tlk.  For example, if the game files are located in C:\Games\The Witcher and the editor is installed in C:\Games, the shortcut would look like this:
 
-  `javaw -DTW.install.path="C:\Games\The Witcher" -jar TWEditor.jar`
+  `javaw -DTW.install.path="C:\Games\The Witcher" -jar TWEditorEnhanced-4.0.0.jar`
 
 Don't forget to put double quotes around the path name.
 
 The language identifier is determined by scanning the windows registry.  If this scan fails or you want to use a different language, you can specify the language identifier when starting the editor.  This is done by specifying -DTW.language=n on the java command line where 'n' is the language identifier for the associated .tlk file.  For example, US English would be specified as:
 
-  `javaw -DTW.language=3 -jar TWEditor.jar`
+  `javaw -DTW.language=3 -jar TWEditorEnhanced-4.0.0.jar`
 
 The game data directory is assumed to be `The Witcher` in the user documents folder (*My Documents* on an English-language system).  If the save games are located in another directory, you can specify the game data directory when starting the editor.  This is done by specifying `-DTW.data.path="<path>"` on the java command line where <path> is directory containing the game data.  For example, if the user login is `Ronald Hoffman`, the normal game data directory would be `C:\Documents and Settings\Ronald Hoffman\My Documents\The Witcher`.
 
@@ -107,3 +107,8 @@ Difficulty support.
 Version 3.0.1
 =============
 Provide a JAR and DMG file
+
+Version 4.0.0
+=============
+The JAR can now be started with `java -jar` / `javaw -jar` (Main-Class manifest attribute).
+Build modernized to Gradle 9; the Windows launcher (launch4j) and Mac DMG packaging are removed and will be replaced by jpackage.

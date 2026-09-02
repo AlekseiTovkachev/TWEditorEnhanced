@@ -1,7 +1,5 @@
 package app.tweditor;
 
-import com.google.common.io.ByteStreams;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -55,7 +53,11 @@ public class SaveEntry
   public void readFromFile(File file) throws IOException {
       try (FileInputStream in = new FileInputStream(file);
            OutputStream out = getOutputStream()) {
-        ByteStreams.copy(in, out);
+        byte[] buffer = new byte[4096];
+        int count;
+        while ((count = in.read(buffer)) > 0) {
+          out.write(buffer, 0, count);
+        }
       }
   }
 
