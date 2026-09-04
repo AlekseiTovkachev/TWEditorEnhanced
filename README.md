@@ -49,6 +49,13 @@ The game data directory is assumed to be `The Witcher` in the user documents fol
 
 The Java runtime will sometimes throws a null pointer exception when adding the shell folders to the file chooser dialog (JFileChooser).  If this happens, you can disable the shell folders by specifying `-DUseShellFolder=0` on the java command line.
 
+Development
+===========
+
+Build and test with `gradlew build` (Gradle 9, Kotlin DSL, version catalog in `gradle/libs.versions.toml`).  A Java 25 toolchain (Temurin) is downloaded automatically on the first build via the Foojay resolver, so no specific JDK needs to be installed.
+
+The test suite contains golden-file tests around the save-database layer.  The primary fixture is a real tutorial save committed under `src/test/resources/saves/`.  Additional local saves are picked up from the gitignored `.local-saves/` directory in the project root: drop any number of `*.TheWitcherSave` files there and the suite round-trips them (files are loaded, re-saved, and compared; they are never modified in place beyond the round-trip and are never committed).  When that directory is absent or empty, the local-save tests are skipped so fresh clones and CI stay green.
+
 ScripterRon - Ronald.Hoffman6@gmail.com
 
 --------------------------------------------------
