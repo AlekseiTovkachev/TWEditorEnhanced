@@ -46,6 +46,11 @@ class EquipPanel(private val session: GameSession, private val environment: AppE
         button.actionCommand = "examine current item"
         buttonPane.add(button)
 
+        button = JButton("Edit Item")
+        button.addActionListener(this)
+        button.actionCommand = "edit current item"
+        buttonPane.add(button)
+
         button = JButton("Remove Item")
         button.addActionListener(this)
         button.actionCommand = "remove current item"
@@ -92,6 +97,8 @@ class EquipPanel(private val session: GameSession, private val environment: AppE
                 examineAvailableItem()
             } else if (action == "examine current item") {
                 examineCurrentItem()
+            } else if (action == "edit current item") {
+                editCurrentItem()
             } else if (action == "add available item") {
                 addSelectedItem()
             } else if (action == "remove current item") {
@@ -117,6 +124,18 @@ class EquipPanel(private val session: GameSession, private val environment: AppE
         val item = itemsModel.getElementAt(sel)
 
         examineItem(item.name, item.element.getValue() as DBList)
+    }
+
+    private fun editCurrentItem() {
+        val sel = itemsField.selectedIndex
+        if (sel < 0) {
+            JOptionPane.showMessageDialog(this, "You must select an item to edit", "No item selected", 0)
+            return
+        }
+
+        val item = itemsModel.getElementAt(sel)
+
+        ItemEditDialog.showDialog(Main.mainWindow, session, environment, item.name, item.element.getValue() as DBList)
     }
 
     @Throws(DBException::class, IOException::class)
