@@ -144,34 +144,12 @@ class JournalEntryNames {
             if (unique != null) {
                 return "Unique " + unique.groupValues[1]
             }
-            val substance = Regex("(hydragenum|vermilion|rebis|quebrith|aether|vitriol)(\\d+)", RegexOption.IGNORE_CASE).find(prefix)
-            if (substance != null) {
-                return capitalize(substance.groupValues[1]) + " " + roman(substance.groupValues[2].toInt())
-            }
 
             return if (prefix.isEmpty()) entryId else capitalize(prefix)
         }
 
         private fun capitalize(prefix: String): String {
             return prefix.substring(0, 1).uppercase() + prefix.substring(1)
-        }
-
-        private fun roman(value: Int): String {
-            val numerals = LinkedHashMap<Int, String>()
-            numerals[10] = "X"
-            numerals[9] = "IX"
-            numerals[5] = "V"
-            numerals[4] = "IV"
-            numerals[1] = "I"
-            var remaining = value
-            val result = StringBuilder()
-            for ((number, numeral) in numerals) {
-                while (remaining >= number) {
-                    result.append(numeral)
-                    remaining -= number
-                }
-            }
-            return result.toString()
         }
     }
 }

@@ -1,5 +1,6 @@
 package app.tweditor
 
+import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.ActionEvent
@@ -170,8 +171,8 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         panel.add(questsPanel)
         tabbedPane.addTab("Quests", panel)
 
-        panel = JPanel()
-        panel.add(knowledgePanel)
+        panel = JPanel(BorderLayout())
+        panel.add(knowledgePanel, BorderLayout.CENTER)
         tabbedPane.addTab("Knowledge", panel)
 
         panel = JPanel()

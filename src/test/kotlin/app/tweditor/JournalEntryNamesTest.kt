@@ -16,8 +16,8 @@ class JournalEntryNamesTest {
     fun numberedEntriesGetFormattedNames() {
         assertEquals("Tutorial 35", JournalEntryNames.displayName("tutorial35"))
         assertEquals("Unique 1", JournalEntryNames.displayName("unique1"))
-        assertEquals("Hydragenum II", JournalEntryNames.displayName("hydragenum2"))
-        assertEquals("Vitriol X", JournalEntryNames.displayName("vitriol10"))
+        assertEquals("Hydragenum2", JournalEntryNames.displayName("hydragenum2"),
+            "ingredient names come from item templates, not a substance-level guess")
     }
 
     @Test

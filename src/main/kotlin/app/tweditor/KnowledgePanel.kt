@@ -169,7 +169,7 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
             }
         }
         if (row.picture.startsWith("je_ingr")) {
-            val resref = "it_ingr_" + row.picture.substring("je_ingr".length)
+            val resref = "it_ingr_" + row.picture.substring("je_ingr_".length)
             val name = itemTemplateName(resref)
             if (name != null) {
                 return withVariant(row.entryId, name)
