@@ -132,7 +132,7 @@ class LoadFile(
                 throw DBException("Save does not contain " + fileName)
             }
             input = saveEntry.getInputStream()
-            var questDatabase = Database(environment)
+            val questDatabase = Database(environment)
             questDatabase.load(input)
             input!!.close()
             input = null
@@ -155,11 +155,11 @@ class LoadFile(
                     throw DBException("Save does not contain " + fileName)
                 }
                 input = saveEntry.getInputStream()
-                questDatabase = Database(environment)
-                questDatabase.load(input)
+                val questTextDatabase = Database(environment)
+                questTextDatabase.load(input)
                 input!!.close()
                 input = null
-                val quest = Quest(resourceName, questDatabase.getTopLevelStruct()!!)
+                val quest = Quest(resourceName, questTextDatabase.getTopLevelStruct()!!)
                 if (quest.questName.isNotEmpty()) {
                     quests.add(quest)
                 }

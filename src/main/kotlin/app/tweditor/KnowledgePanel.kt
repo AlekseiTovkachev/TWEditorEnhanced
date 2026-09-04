@@ -20,7 +20,7 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
 
     private class CatalogRow(val category: String, val entryId: String, val picture: String)
 
-    private class CatalogEntry(val category: String, val entryId: String, val label: String, val inSave: Boolean)
+    private class CatalogEntry(val category: String, val entryId: String, val label: String, val inSave: Boolean, val variantIds: List<String>)
 
     private val tabbedPane = JPanel(CardLayout())
     private val cardLayout = tabbedPane.layout as CardLayout
@@ -88,9 +88,9 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
                 checkBox.addActionListener {
                     try {
                         if (checkBox.isSelected) {
-                            session.addJournalEntry(entry.category, entry.entryId)
+                            session.addJournalEntry(entry.category, entry.variantIds.first())
                         } else {
-                            session.removeJournalEntries(listOf(JournalEntry(entry.category, entry.entryId, false)))
+                            session.removeJournalEntries(entry.variantIds.map { JournalEntry(entry.category, it, false) })
                         }
                     } catch (exc: Throwable) {
                         Main.logException("Unable to edit journal entry", exc)
@@ -120,14 +120,35 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
             val key = category + ":" + entryId.lowercase()
             val entry = inSave[key]
             val unread = if (entry != null && !entry.isRead) " (unread)" else ""
-            result[key] = CatalogEntry(category, entryId, label + unread, entry != null)
+            result[key] = CatalogEntry(category, entryId, label + unread, entry != null, listOf(entryId))
         }
 
         val catalog = journalCatalog()
-        for (category in tab.catalogCategories) {
-            val rows = catalog?.get(category) ?: emptyList()
+        if (tab.title == "Monsters") {
+            val rows = catalog?.get("bestiary") ?: emptyList()
+            val grouped = LinkedHashMap<String, MutableList<CatalogRow>>()
             for (row in rows) {
-                put(row.category, row.entryId, rowLabel(row))
+                val sep = row.entryId.indexOf('/')
+                val prefix = if (sep > 0) row.entryId.substring(0, sep) else row.entryId
+                grouped.getOrPut(prefix.lowercase()) { ArrayList() }.add(row)
+            }
+            for (groupedEntry in grouped) {
+                val group = groupedEntry.value
+                val representative = group.first()
+                val variantIds = group.map { it.entryId }
+                val present = variantIds.map { inSave[representative.category + ":" + it.lowercase()] }
+                val inSave = present.any { it != null }
+                val unread = present.any { it != null && !it.isRead }
+                val label = JournalEntryNames.displayName(representative.entryId) + if (unread) " (unread)" else ""
+                val key = representative.category.lowercase() + ":" + groupedEntry.key
+                result[key] = CatalogEntry(representative.category, representative.entryId, label, inSave, variantIds)
+            }
+        } else {
+            for (category in tab.catalogCategories) {
+                val rows = catalog?.get(category) ?: emptyList()
+                for (row in rows) {
+                    put(row.category, row.entryId, rowLabel(row))
+                }
             }
         }
 
@@ -142,9 +163,15 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
         }
 
         if (journalData != null) {
+            val covered = HashSet<String>()
+            for (entry in result.values) {
+                for (id in entry.variantIds) {
+                    covered.add(entry.category + ":" + id.lowercase())
+                }
+            }
             for (entry in journalData.entries) {
                 val key = entry.category + ":" + entry.entryId.lowercase()
-                if (result.containsKey(key)) {
+                if (result.containsKey(key) || covered.contains(key)) {
                     continue
                 }
                 val belongsToTab = if (tab.title == "Monsters") {
