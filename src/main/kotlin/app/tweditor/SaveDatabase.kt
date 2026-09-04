@@ -7,7 +7,8 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
 
-class SaveDatabase(val environment: AppEnvironment, val file: File) {
+class SaveDatabase(val environment: AppEnvironment, file: File) {
+    private val file: File = file
     private val saveName: String
     private var savePrefix = ""
     private var dataOffset = 0
@@ -171,6 +172,8 @@ class SaveDatabase(val environment: AppEnvironment, val file: File) {
     fun getName(): String = saveName
 
     fun getPath(): String = file.getPath()
+
+    fun getFile(): File = file
 
     fun getEntry(resourceName: String): SaveEntry? {
         var entry = entryMap[resourceName.lowercase()]
