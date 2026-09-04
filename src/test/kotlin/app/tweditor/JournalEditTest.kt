@@ -80,6 +80,42 @@ class JournalEditTest {
             "removal must match the entry id regardless of case")
     }
 
+    @Test
+    fun localSavesSurviveAggressiveJournalEditing(@TempDir tempDir: Path) {
+        val savesDir = Path.of(System.getProperty("tweditor.localSaves", ".local-saves")).toFile()
+        val saves = savesDir.listFiles { _, name -> name.endsWith(".TheWitcherSave") }
+        org.junit.jupiter.api.Assumptions.assumeTrue(saves != null && saves.isNotEmpty(),
+            "no local saves in '" + savesDir + "'")
+
+        for (save in saves) {
+            val workDir = Files.createDirectory(tempDir.resolve("edit-" + save.name))
+            val copy = Files.copy(save.toPath(), workDir.resolve(save.name)).toFile()
+            val loaded = SaveSeamSupport.load(environment, copy, workDir)
+            val pristine = SaveDatabase(environment, copy)
+            pristine.load()
+            val before = SaveSeamSupport.entryDigests(pristine)
+
+            loaded.session.addJournalEntry("character", "abigail/saved")
+            loaded.session.addJournalEntry("recipe", "it_potion_001")
+            loaded.session.addJournalEntry("bestiary", "ghoul/w/1")
+            loaded.session.removeJournalEntries(loaded.session.getJournalData()!!.entriesInCategory("tutorial"))
+
+            SaveSeamSupport.save(loaded)
+
+            val repacked = SaveDatabase(environment, copy)
+            repacked.load()
+            val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
+            val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!, loaded.questDBName + ".qdb")
+            assertTrue(allowedToChange.containsAll(rewritten), save.name + ": unexpected entries changed: " + rewritten)
+
+            val reloaded = SaveSeamSupport.load(environment, copy, workDir)
+            assertTrue(reloaded.session.getJournalData()!!.entries.any { it.entryId == "abigail/saved" },
+                save.name + ": added entry must survive")
+            assertTrue(reloaded.session.getJournalData()!!.entriesInCategory("tutorial").isEmpty(),
+                save.name + ": removed entries must be gone")
+        }
+    }
+
     companion object {
         lateinit var environment: AppEnvironment
 

@@ -577,12 +577,12 @@ class Database(val environment: AppEnvironment) {
         when (fieldType) {
             15 -> dataOffset = encodeList(element)
             14 -> dataOffset = encodeStruct(element)
-            0 -> dataOffset = (fieldValue as Int) and 0xFF
+            0 -> dataOffset = numericInt(fieldValue!!) and 0xFF
             1 -> dataOffset = (fieldValue as Char).code and 0xFFFF
-            2, 3 -> dataOffset = (fieldValue as Int) and 0xFFFF
-            4 -> dataOffset = (fieldValue as Long).toInt()
-            5 -> dataOffset = fieldValue as Int
-            6, 7 -> dataOffset = setFieldData(fieldValue as Long)
+            2, 3 -> dataOffset = numericInt(fieldValue!!) and 0xFFFF
+            4 -> dataOffset = numericLong(fieldValue!!).toInt()
+            5 -> dataOffset = numericInt(fieldValue!!)
+            6, 7 -> dataOffset = setFieldData(numericLong(fieldValue!!))
             8 -> dataOffset = java.lang.Float.floatToIntBits(fieldValue as Float)
             9 -> dataOffset = setFieldData(java.lang.Double.doubleToLongBits(fieldValue as Double))
             13 -> {
@@ -782,6 +782,18 @@ class Database(val environment: AppEnvironment) {
         this.fieldDataBuffer!![dataOffset + 6] = (data ushr 48).toInt().toByte()
         this.fieldDataBuffer!![dataOffset + 7] = (data ushr 56).toInt().toByte()
         return dataOffset
+    }
+
+    private fun numericLong(value: Any): Long = when (value) {
+        is Long -> value
+        is Int -> value.toLong()
+        else -> throw DBException("Field value is not an integer number")
+    }
+
+    private fun numericInt(value: Any): Int = when (value) {
+        is Int -> value
+        is Long -> value.toInt()
+        else -> throw DBException("Field value is not an integer number")
     }
 
     private fun getInteger(buffer: ByteArray, offset: Int): Int {

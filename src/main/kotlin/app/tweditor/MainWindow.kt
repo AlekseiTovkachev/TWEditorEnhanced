@@ -143,40 +143,40 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         tabbedPane.isVisible = false
         contentPane = tabbedPane
 
-        var panel = JPanel()
-        panel.add(statsPanel)
+        var panel = JPanel(BorderLayout())
+        panel.add(statsPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Stats", panel)
 
-        panel = JPanel()
-        panel.add(attributesPanel)
+        panel = JPanel(BorderLayout())
+        panel.add(attributesPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Attributes", panel)
 
-        panel = JPanel()
-        panel.add(signsPanel)
+        panel = JPanel(BorderLayout())
+        panel.add(signsPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Signs", panel)
 
-        panel = JPanel()
-        panel.add(stylesPanel)
+        panel = JPanel(BorderLayout())
+        panel.add(stylesPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Styles", panel)
 
-        panel = JPanel()
-        panel.add(equipPanel)
+        panel = JPanel(BorderLayout())
+        panel.add(equipPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Equipment", panel)
 
-        panel = JPanel()
-        panel.add(inventoryPanel)
+        panel = JPanel(BorderLayout())
+        panel.add(inventoryPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Inventory", panel)
 
-        panel = JPanel()
-        panel.add(questsPanel)
+        panel = JPanel(BorderLayout())
+        panel.add(questsPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Quests", panel)
 
         panel = JPanel(BorderLayout())
         panel.add(knowledgePanel, BorderLayout.CENTER)
         tabbedPane.addTab("Knowledge", panel)
 
-        panel = JPanel()
-        panel.add(difficultyPanel)
+        panel = JPanel(BorderLayout())
+        panel.add(difficultyPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Difficulty", panel)
 
         addWindowListener(ApplicationWindowListener())
@@ -552,3 +552,4 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         }
     }
 }
+

@@ -90,8 +90,8 @@ class GameSession(tmpDir: File) {
         } else {
             val fields = DBList(questDatabase.environment, 4)
             fields.addElement(DBElement(DBElement.STRING, 0, "Entry", category + ":" + entryId))
-            fields.addElement(DBElement(DBElement.DWORD, 0, "EntryCD", 0))
-            fields.addElement(DBElement(DBElement.DWORD, 0, "EntryTOD", 0))
+            fields.addElement(DBElement(DBElement.DWORD, 0, "EntryCD", 0L))
+            fields.addElement(DBElement(DBElement.DWORD, 0, "EntryTOD", 0L))
             fields.addElement(DBElement(DBElement.BYTE, 0, "EntryRead", 0))
             DBElement(DBElement.STRUCT, 0, "", fields)
         }
