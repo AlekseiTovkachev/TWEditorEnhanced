@@ -84,3 +84,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+
+# Local test saves (owner-only fixtures; see T2)
+.local-saves/

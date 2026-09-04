@@ -192,6 +192,7 @@ public class Main
         in.close();
       }
 
+      properties.setProperty("app.version", BuildInfo.VERSION);
       properties.setProperty("java.version", System.getProperty("java.version"));
       properties.setProperty("java.home", System.getProperty("java.home"));
       properties.setProperty("os.name", System.getProperty("os.name"));
