@@ -2,15 +2,19 @@ name: CI
 
 on:
   push:
-    branches: [master]
   pull_request:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Temurin 25
         uses: actions/setup-java@v5
@@ -19,13 +23,13 @@ jobs:
           java-version: 25
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Build, test, package
         run: .\gradlew.bat build packageWindowsAppImage
 
       - name: Upload zipped Windows app-image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: TWEditor-win-app-image
           path: build/distributions/TWEditor-win-*.zip
@@ -33,7 +37,7 @@ jobs:
 
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: build/reports/tests/test/

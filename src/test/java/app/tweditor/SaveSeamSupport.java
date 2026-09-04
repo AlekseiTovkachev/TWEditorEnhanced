@@ -130,6 +130,16 @@ final class SaveSeamSupport {
     loaded.saveDatabase = saveDatabase;
   }
 
+  static java.util.Set<String> changedEntries(Map<String, Long> before, Map<String, Long> after) {
+    java.util.Set<String> changed = new java.util.HashSet<>();
+    for (String name : before.keySet()) {
+      if (!before.get(name).equals(after.get(name))) {
+        changed.add(name);
+      }
+    }
+    return changed;
+  }
+
   static Map<String, Long> entryDigests(SaveDatabase saveDatabase) throws Exception {
     Map<String, Long> digests = new LinkedHashMap<>();
     CRC32 crc = new CRC32();

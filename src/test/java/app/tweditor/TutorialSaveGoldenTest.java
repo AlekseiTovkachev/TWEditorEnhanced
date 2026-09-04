@@ -2,7 +2,6 @@ package app.tweditor;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
@@ -95,14 +94,8 @@ class TutorialSaveGoldenTest {
     Map<String, Long> after = SaveSeamSupport.entryDigests(repacked);
 
     assertEquals(before.keySet(), after.keySet());
-    Set<String> expectedRewritten = Set.of(loaded.modName, "player.utc", loaded.smmName);
-    Set<String> rewritten = new HashSet<>();
-    for (String name : before.keySet()) {
-      if (!before.get(name).equals(after.get(name))) {
-        rewritten.add(name);
-      }
-    }
-    assertEquals(expectedRewritten, rewritten,
+    Set<String> rewritten = SaveSeamSupport.changedEntries(before, after);
+    assertEquals(Set.of(loaded.modName, "player.utc", loaded.smmName), rewritten,
         "only the module .sav container, player.utc and the .smm file are rewritten by a save; every other entry must be byte-identical");
   }
 

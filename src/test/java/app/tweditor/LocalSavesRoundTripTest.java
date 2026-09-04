@@ -3,7 +3,6 @@ package app.tweditor;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
@@ -41,12 +40,7 @@ class LocalSavesRoundTripTest {
       Map<String, Long> after = SaveSeamSupport.entryDigests(loaded.saveDatabase);
 
       assertEquals(before.keySet(), after.keySet(), save.getName());
-      Set<String> rewritten = new HashSet<>();
-      for (String name : before.keySet()) {
-        if (!before.get(name).equals(after.get(name))) {
-          rewritten.add(name);
-        }
-      }
+      Set<String> rewritten = SaveSeamSupport.changedEntries(before, after);
       Set<String> allowedToChange = Set.of(loaded.modName, "player.utc", loaded.smmName);
       assertTrue(allowedToChange.containsAll(rewritten),
           save.getName() + ": entries outside the module .sav container, player.utc and the .smm file changed: " + rewritten);
