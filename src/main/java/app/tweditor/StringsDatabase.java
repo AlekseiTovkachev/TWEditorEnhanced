@@ -3,6 +3,7 @@ package app.tweditor;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 
 public class StringsDatabase
 {
@@ -38,10 +39,10 @@ public class StringsDatabase
     String type = new String(buffer, 0, 4);
     String version = new String(buffer, 4, 4);
     if (!type.equals("TLK ")) {
-      throw new DBException(new StringBuilder().append("File type '").append(type).append("' is not supported").toString());
+      throw new DBException("File type '" + type + "' is not supported");
     }
     if (!version.equals("V3.0")) {
-      throw new DBException(new StringBuilder().append("File version '").append(version).append("' is not supported").toString());
+      throw new DBException("File version '" + version + "' is not supported");
     }
     this.languageID = getInteger(buffer, 8);
     this.stringCount = getInteger(buffer, 12);
@@ -70,7 +71,7 @@ public class StringsDatabase
         this.in.seek(this.entryOffset + refid * 40);
         int count = this.in.read(buffer);
         if (count != buffer.length) {
-          throw new DBException(new StringBuilder().append("String entry truncated for reference ").append(refid).toString());
+          throw new DBException("String entry truncated for reference " + refid);
         }
 
         if ((buffer[0] & 0x1) != 0) {
@@ -80,9 +81,9 @@ public class StringsDatabase
           this.in.seek(this.stringOffset + offset);
           count = this.in.read(data);
           if (count != length) {
-            throw new DBException(new StringBuilder().append("String data truncated for reference ").append(refid).toString());
+            throw new DBException("String data truncated for reference " + refid);
           }
-          string = new String(data, "UTF-8");
+          string = new String(data, StandardCharsets.UTF_8);
         }
       }
     } catch (DBException exc) {
@@ -91,7 +92,7 @@ public class StringsDatabase
       Main.logException("Unable to read string database", exc);
     }
 
-    return string != null ? string : new String();
+    return string != null ? string : "";
   }
 
   public String getLabel(int stringRef)

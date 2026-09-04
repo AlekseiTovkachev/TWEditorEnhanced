@@ -29,13 +29,12 @@ public class UnpackSave extends Thread
     InputStream in = null;
     FileOutputStream out = null;
     try {
-      List entries = this.session.getSaveDatabase().getEntries();
+      List<SaveEntry> entries = this.session.getSaveDatabase().getEntries();
       byte[] buffer = new byte[4096];
       int total = entries.size();
       int processed = 0;
       int currentProgress = 0;
-      for (Object entryObj : entries) {
-        SaveEntry entry = (SaveEntry)entryObj;
+      for (SaveEntry entry : entries) {
         String resourceName = entry.getResourceName();
         file = new File(this.dirFile.getPath() + this.environment.getFileSeparator() + resourceName);
         if ((file.exists()) &&

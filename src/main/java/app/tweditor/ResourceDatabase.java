@@ -3,7 +3,9 @@ package app.tweditor;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -34,43 +36,25 @@ public class ResourceDatabase
     this.databaseType = "ERF ";
     this.databaseVersion = "V1.0";
     this.description = new LocalizedString(-1);
-    this.entries = new ArrayList(64);
-    this.entryMap = new HashMap(64);
+    this.entries = new ArrayList<>(64);
+    this.entryMap = new HashMap<>(64);
   }
 
   public void load()
     throws DBException, IOException
   {
-    RandomAccessFile in = new RandomAccessFile(this.file, "r");
-    try
-    {
-      byte[] header = new byte[' '];
+    try (RandomAccessFile in = new RandomAccessFile(this.file, "r")) {
+      byte[] header = new byte[160];
       int count = in.read(header);
       if (count != 160) {
         throw new DBException("Database header is too short");
       }
-      boolean validType = false;
       this.databaseType = new String(header, 0, 4);
-      for (int i = 0; i < databaseTypes.length; i++) {
-        if (this.databaseType.equals(databaseTypes[i])) {
-          validType = true;
-          break;
-        }
-      }
-
-      if (!validType) {
+      if (!Arrays.asList(databaseTypes).contains(this.databaseType)) {
         throw new DBException("Database type '" + this.databaseType + "' is not supported");
       }
-      boolean validVersion = false;
       this.databaseVersion = new String(header, 4, 4);
-      for (int i = 0; i < databaseVersions.length; i++) {
-        if (this.databaseVersion.equals(databaseVersions[i])) {
-          validVersion = true;
-          break;
-        }
-      }
-
-      if (!validVersion) {
+      if (!Arrays.asList(databaseVersions).contains(this.databaseVersion)) {
         throw new DBException("Database version '" + this.databaseVersion + "' is not supported");
       }
       int stringCount = getInteger(header, 8);
@@ -82,12 +66,12 @@ public class ResourceDatabase
       int stringReference = getInteger(header, 40);
 
       this.description = new LocalizedString(stringReference);
-      this.entries = new ArrayList(Math.max(entryCount, 10));
-      this.entryMap = new HashMap(Math.max(entryCount, 10));
+      this.entries = new ArrayList<>(Math.max(entryCount, 10));
+      this.entryMap = new HashMap<>(Math.max(entryCount, 10));
 
       if (stringCount > 0) {
         in.seek(stringOffset);
-        byte[] buffer = new byte[''];
+        byte[] buffer = new byte[128];
         for (int i = 0; i < stringCount; i++) {
           count = in.read(buffer, 0, 8);
           if (count != 8) {
@@ -106,12 +90,12 @@ public class ResourceDatabase
             if (count != stringLength) {
               throw new DBException("String list truncated");
             }
-            string = new String(buffer, 0, stringLength, "UTF-8");
+            string = new String(buffer, 0, stringLength, StandardCharsets.UTF_8);
             stringLength = string.length();
             if (string.charAt(stringLength - 1) == 0)
               string = string.substring(0, stringLength - 1);
           } else {
-            string = new String();
+            string = "";
           }
 
           this.description.addSubstring(new LocalizedSubstring(string, language, gender));
@@ -119,8 +103,8 @@ public class ResourceDatabase
 
       }
 
-      List resourceNames = new ArrayList(entryCount);
-      List resourceTypes = new ArrayList(entryCount);
+      List<String> resourceNames = new ArrayList<>(entryCount);
+      List<Integer> resourceTypes = new ArrayList<>(entryCount);
       if (entryCount > 0) {
         in.seek(keyOffset);
         int nameLength;
@@ -139,10 +123,11 @@ public class ResourceDatabase
           if (count != keyLength) {
             throw new DBException("Key list truncated");
           }
-          for (count = 0; (count < nameLength) && 
-            (key[count] != 0); count++);
-          resourceNames.add(new String(key, 0, count));
-          resourceTypes.add(new Integer(getShort(key, nameLength + 4)));
+          int nameEnd;
+          for (nameEnd = 0; (nameEnd < nameLength) &&
+            (key[nameEnd] != 0); nameEnd++);
+          resourceNames.add(new String(key, 0, nameEnd));
+          resourceTypes.add(getShort(key, nameLength + 4));
         }
 
       }
@@ -157,8 +142,8 @@ public class ResourceDatabase
           }
           long offset = getInteger(element, 0);
           int length = getInteger(element, 4);
-          String resourceName = (String)resourceNames.get(i);
-          int resourceType = ((Integer)resourceTypes.get(i)).intValue();
+          String resourceName = resourceNames.get(i);
+          int resourceType = resourceTypes.get(i);
           if ((resourceName.length() > 0) && (resourceType != 65535)) {
             ResourceEntry entry = new ResourceEntry(resourceName, resourceType, this.file, offset, length);
             this.entries.add(entry);
@@ -166,10 +151,6 @@ public class ResourceDatabase
           }
         }
       }
-    }
-    finally
-    {
-      in.close();
     }
   }
 
@@ -180,19 +161,16 @@ public class ResourceDatabase
     if (outputFile.exists()) {
       outputFile.delete();
     }
-    RandomAccessFile out = new RandomAccessFile(outputFile, "rw");
-    RandomAccessFile in = null;
-    try
-    {
-      byte[] header = new byte[' '];
+    boolean saved = false;
+    try (RandomAccessFile out = new RandomAccessFile(outputFile, "rw")) {
+      byte[] header = new byte[160];
       out.write(header);
 
-      byte[] buffer = new byte[''];
+      byte[] buffer = new byte[128];
       int stringOffset = (int)out.getFilePointer();
       int stringSize = 0;
       int stringCount = this.description.getSubstringCount();
-      for (int i = 0; i < stringCount; i++) {
-        LocalizedSubstring substring = this.description.getSubstring(i);
+      for (LocalizedSubstring substring : this.description.getSubstrings()) {
         String string = substring.getString();
         byte[] stringBytes = string.getBytes();
         int length = stringBytes.length;
@@ -254,21 +232,19 @@ public class ResourceDatabase
 
       buffer = new byte[4096];
       for (ResourceEntry entry : this.entries) {
-        in = new RandomAccessFile(entry.getFile(), "r");
-        in.seek(entry.getOffset());
-        int residualLength = entry.getLength();
-        while (residualLength > 0) {
-          int length = Math.min(residualLength, buffer.length);
-          int count = in.read(buffer, 0, length);
-          if (count != length) {
-            throw new DBException("Data truncated for resource " + entry.getName());
+        try (RandomAccessFile in = new RandomAccessFile(entry.getFile(), "r")) {
+          in.seek(entry.getOffset());
+          int residualLength = entry.getLength();
+          while (residualLength > 0) {
+            int length = Math.min(residualLength, buffer.length);
+            int count = in.read(buffer, 0, length);
+            if (count != length) {
+              throw new DBException("Data truncated for resource " + entry.getName());
+            }
+            out.write(buffer, 0, count);
+            residualLength -= count;
           }
-          out.write(buffer, 0, count);
-          residualLength -= count;
         }
-
-        in.close();
-        in = null;
       }
 
       Calendar calendar = new GregorianCalendar();
@@ -294,29 +270,21 @@ public class ResourceDatabase
 
       out.seek(0L);
       out.write(header, 0, 44);
-      out.close();
-      out = null;
-
-      if ((this.file.exists()) && 
-        (!this.file.delete())) {
-        throw new IOException("Unable to delete " + this.file.getName());
+      saved = true;
+    } finally {
+      if (!saved) {
+        outputFile.delete();
       }
-      if (!outputFile.renameTo(this.file)) {
-        throw new IOException("Unable to rename " + outputFile.getName() + " to " + this.file.getName());
-      }
-
     }
-    finally
-    {
-      if (in != null) {
-        in.close();
-      }
 
-      if (out != null) {
-        out.close();
-        if (outputFile.exists())
-          outputFile.delete();
-      }
+    if ((this.file.exists()) &&
+      (!this.file.delete())) {
+      outputFile.delete();
+      throw new IOException("Unable to delete " + this.file.getName());
+    }
+    if (!outputFile.renameTo(this.file)) {
+      outputFile.delete();
+      throw new IOException("Unable to rename " + outputFile.getName() + " to " + this.file.getName());
     }
   }
 
@@ -337,15 +305,7 @@ public class ResourceDatabase
 
   public void setType(String type)
   {
-    boolean validType = false;
-    for (int i = 0; i < databaseTypes.length; i++) {
-      if (type.equals(databaseTypes[i])) {
-        validType = true;
-        break;
-      }
-    }
-
-    if (!validType) {
+    if (!Arrays.asList(databaseTypes).contains(type)) {
       throw new IllegalArgumentException("Database type '" + type + "' is not supported");
     }
     this.databaseType = type;
@@ -358,15 +318,7 @@ public class ResourceDatabase
 
   public void setVersion(String version)
   {
-    boolean validVersion = false;
-    for (int i = 0; i < databaseVersions.length; i++) {
-      if (version.equals(databaseVersions[i])) {
-        validVersion = true;
-        break;
-      }
-    }
-
-    if (!validVersion) {
+    if (!Arrays.asList(databaseVersions).contains(version)) {
       throw new IllegalArgumentException("Database version '" + version + "' is not supported");
     }
     this.databaseVersion = version;
@@ -391,7 +343,7 @@ public class ResourceDatabase
   {
     ResourceEntry entry;
     if (index < this.entries.size())
-      entry = (ResourceEntry)this.entries.get(index);
+      entry = this.entries.get(index);
     else {
       entry = null;
     }
@@ -400,12 +352,12 @@ public class ResourceDatabase
 
   public ResourceEntry getEntry(String entryName)
   {
-    return (ResourceEntry)this.entryMap.get(entryName.toLowerCase());
+    return this.entryMap.get(entryName.toLowerCase());
   }
 
   public int addEntry(ResourceEntry entry)
   {
-    ResourceEntry oldEntry = (ResourceEntry)this.entryMap.get(entry.getName());
+    ResourceEntry oldEntry = this.entryMap.get(entry.getName());
     int index;
     if (oldEntry != null) {
       index = this.entries.indexOf(oldEntry);
@@ -421,7 +373,7 @@ public class ResourceDatabase
 
   public int removeEntry(ResourceEntry entry)
   {
-    ResourceEntry oldEntry = (ResourceEntry)this.entryMap.get(entry.getName());
+    ResourceEntry oldEntry = this.entryMap.get(entry.getName());
     int index;
     if (oldEntry == null) {
       index = -1;
@@ -436,7 +388,7 @@ public class ResourceDatabase
 
   public void removeEntry(int index)
   {
-    ResourceEntry entry = (ResourceEntry)this.entries.remove(index);
+    ResourceEntry entry = this.entries.remove(index);
     this.entryMap.remove(entry.getName());
   }
 
@@ -469,4 +421,3 @@ public class ResourceDatabase
     return this.file.getPath();
   }
 }
-

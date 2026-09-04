@@ -2,11 +2,12 @@ package app.tweditor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 public class DBList extends DBElementValue
-  implements Cloneable
+  implements Cloneable, Iterable<DBElement>
 {
   private List<DBElement> elementList;
   private Map<String, DBElement> labelMap;
@@ -15,8 +16,8 @@ public class DBList extends DBElementValue
   public DBList(AppEnvironment environment, int capacity)
   {
     this.environment = environment;
-    this.elementList = new ArrayList(capacity);
-    this.labelMap = new HashMap(capacity);
+    this.elementList = new ArrayList<>(capacity);
+    this.labelMap = new HashMap<>(capacity);
   }
 
   public boolean addElement(DBElement element)
@@ -52,7 +53,7 @@ public class DBList extends DBElementValue
 
   public DBElement removeElement(int index)
   {
-    DBElement element = (DBElement)this.elementList.get(index);
+    DBElement element = this.elementList.get(index);
     this.elementList.remove(index);
     String label = element.getLabel();
     if (label.length() != 0) {
@@ -66,7 +67,7 @@ public class DBList extends DBElementValue
     if ((label == null) || (label.length() == 0)) {
       throw new IllegalArgumentException("No database element label supplied");
     }
-    DBElement element = (DBElement)this.labelMap.get(label);
+    DBElement element = this.labelMap.get(label);
     if (element == null) {
       return false;
     }
@@ -94,7 +95,7 @@ public class DBList extends DBElementValue
     if ((label == null) || (label.length() == 0)) {
       throw new IllegalArgumentException("No database element label supplied");
     }
-    return (DBElement)this.labelMap.get(label);
+    return this.labelMap.get(label);
   }
 
   public void setElement(String label, DBElement element)
@@ -102,7 +103,7 @@ public class DBList extends DBElementValue
     if ((label == null) || (label.length() == 0)) {
       throw new IllegalArgumentException("No database element label supplied");
     }
-    DBElement oldElement = (DBElement)this.labelMap.get(label);
+    DBElement oldElement = this.labelMap.get(label);
     if (oldElement != null) {
       int index = this.elementList.indexOf(oldElement);
       this.elementList.set(index, element);
@@ -118,14 +119,19 @@ public class DBList extends DBElementValue
     return this.elementList.size();
   }
 
+  public Iterator<DBElement> iterator()
+  {
+    return this.elementList.iterator();
+  }
+
   public DBElement getElement(int index)
   {
-    return (DBElement)this.elementList.get(index);
+    return this.elementList.get(index);
   }
 
   public void setElement(int index, DBElement element)
   {
-    DBElement oldElement = (DBElement)this.elementList.get(index);
+    DBElement oldElement = this.elementList.get(index);
     String oldLabel = oldElement.getLabel();
     String label = element.getLabel();
     if (!label.equals(oldLabel)) {
@@ -252,31 +258,31 @@ public class DBList extends DBElementValue
     if (element != null) {
       int fieldType = element.getType();
       if (fieldType == 0) {
-        element.setValue(new Integer(value & 0xFF));
+        element.setValue(value & 0xFF);
       } else if (fieldType == 2) {
-        element.setValue(new Integer(value & 0xFFFF));
+        element.setValue(value & 0xFFFF);
       } else if (fieldType == 3) {
         int shortValue = value & 0xFFFF;
         if (shortValue > 32767)
           shortValue |= -65536;
-        element.setValue(new Integer(shortValue));
+        element.setValue(shortValue);
       } else if (fieldType == 5) {
-        element.setValue(new Integer(value));
+        element.setValue(value);
       } else if (fieldType == 4) {
-        element.setValue(new Long(value & 0xFFFFFFFF));
+        element.setValue(Long.valueOf(value & 0xFFFFFFFF));
       } else if ((fieldType == 6) || (fieldType == 7)) {
-        element.setValue(new Long(value));
+        element.setValue(Long.valueOf(value));
       } else if (fieldType == 1) {
-        element.setValue(new Character((char)value));
+        element.setValue(Character.valueOf((char)value));
       } else if (fieldType == 8) {
-        element.setValue(new Float(value));
+        element.setValue(Float.valueOf(value));
       } else if (fieldType == 9) {
-        element.setValue(new Double(value));
+        element.setValue(Double.valueOf(value));
       } else {
         throw new DBException("Field " + label + " is not numeric");
       }
     } else {
-      addElement(new DBElement(type, 0, label, new Integer(value)));
+      addElement(new DBElement(type, 0, label, value));
     }
   }
 
@@ -306,27 +312,26 @@ public class DBList extends DBElementValue
     if (element != null) {
       int fieldType = element.getType();
       if (fieldType == 8)
-        element.setValue(new Float(value));
+        element.setValue(Float.valueOf(value));
       else
         throw new DBException("Field " + label + " is not floating-point");
     }
     else {
-      addElement(new DBElement(8, 0, label, new Float(value)));
+      addElement(new DBElement(8, 0, label, Float.valueOf(value)));
     }
   }
 
-  public Object clone()
+  public DBList clone()
   {
-    Object clonedObject = super.clone();
-    DBList clonedList = (DBList)clonedObject;
+    DBList clonedList = (DBList)super.clone();
 
     int count = this.elementList.size();
-    clonedList.elementList = new ArrayList(count);
-    clonedList.labelMap = new HashMap(count);
+    clonedList.elementList = new ArrayList<>(count);
+    clonedList.labelMap = new HashMap<>(count);
     for (DBElement element : this.elementList) {
-      clonedList.addElement((DBElement)element.clone());
+      clonedList.addElement(element.clone());
     }
-    return clonedObject;
+    return clonedList;
   }
 }
 

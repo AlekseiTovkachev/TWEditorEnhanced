@@ -34,75 +34,74 @@ public class KeyDatabase
   private void readFile()
     throws DBException, IOException
   {
-    RandomAccessFile in = new RandomAccessFile(this.file, "r");
+    try (RandomAccessFile in = new RandomAccessFile(this.file, "r")) {
 
-    byte[] header = new byte[68];
-    int count = in.read(header);
-    if (count != header.length) {
-      throw new DBException("KEY header length is incorrect");
-    }
-    String signature = new String(header, 0, 4);
-    if (!signature.equals("KEY ")) {
-      throw new DBException("KEY header signature is incorrect");
-    }
-    String version = new String(header, 4, 4);
-    if (!version.equals("V1.1")) {
-      throw new DBException("KEY header version " + version + " is not supported");
-    }
-    int fileCount = getInteger(header, 8);
-    long fileOffset = getInteger(header, 20);
-    int keyCount = getInteger(header, 12);
-    long keyOffset = getInteger(header, 24);
-
-    this.archiveNames = new ArrayList(fileCount);
-    byte[] fileBuffer = new byte[12];
-    byte[] nameBuffer = new byte[256];
-    for (int i = 0; i < fileCount; i++) {
-      in.seek(fileOffset);
-      count = in.read(fileBuffer);
-      if (count != fileBuffer.length) {
-        throw new DBException("File table truncated");
+      byte[] header = new byte[68];
+      int count = in.read(header);
+      if (count != header.length) {
+        throw new DBException("KEY header length is incorrect");
       }
-      long nameOffset = getInteger(fileBuffer, 4);
-      int nameLength = getInteger(fileBuffer, 8);
-      if (nameLength > nameBuffer.length) {
-        nameBuffer = new byte[nameLength];
+      String signature = new String(header, 0, 4);
+      if (!signature.equals("KEY ")) {
+        throw new DBException("KEY header signature is incorrect");
       }
-      in.seek(nameOffset);
-      in.read(nameBuffer, 0, nameLength);
-      String fileName = new String(nameBuffer, 0, nameLength);
-      this.archiveNames.add(fileName);
+      String version = new String(header, 4, 4);
+      if (!version.equals("V1.1")) {
+        throw new DBException("KEY header version " + version + " is not supported");
+      }
+      int fileCount = getInteger(header, 8);
+      long fileOffset = getInteger(header, 20);
+      int keyCount = getInteger(header, 12);
+      long keyOffset = getInteger(header, 24);
 
-      fileOffset += 12L;
+      this.archiveNames = new ArrayList<>(fileCount);
+      byte[] fileBuffer = new byte[12];
+      byte[] nameBuffer = new byte[256];
+      for (int i = 0; i < fileCount; i++) {
+        in.seek(fileOffset);
+        count = in.read(fileBuffer);
+        if (count != fileBuffer.length) {
+          throw new DBException("File table truncated");
+        }
+        long nameOffset = getInteger(fileBuffer, 4);
+        int nameLength = getInteger(fileBuffer, 8);
+        if (nameLength > nameBuffer.length) {
+          nameBuffer = new byte[nameLength];
+        }
+        in.seek(nameOffset);
+        in.read(nameBuffer, 0, nameLength);
+        String fileName = new String(nameBuffer, 0, nameLength);
+        this.archiveNames.add(fileName);
+
+        fileOffset += 12L;
+      }
+
+      this.keyEntries = new ArrayList<>(keyCount);
+      this.keyEntriesMap = new HashMap<>(keyCount);
+      byte[] keyBuffer = new byte[26];
+      for (int i = 0; i < keyCount; i++) {
+        in.seek(keyOffset);
+        count = in.read(keyBuffer);
+        if (count != keyBuffer.length) {
+          throw new DBException("Key table truncated");
+        }
+        int nameLength;
+        for (nameLength = 1; (nameLength < 16) &&
+          (keyBuffer[nameLength] != 0); nameLength++);
+        String resourceName = new String(keyBuffer, 0, nameLength);
+        int resourceType = getShort(keyBuffer, 16);
+        int resourceID = getInteger(keyBuffer, 18);
+        int index = getInteger(keyBuffer, 22) >>> 20;
+        if (index >= this.archiveNames.size()) {
+          throw new DBException("BIF index for resource " + resourceName + " is too large");
+        }
+        String archivePath = this.file.getParent() + this.environment.getFileSeparator() + this.archiveNames.get(index);
+        KeyEntry keyEntry = new KeyEntry(resourceName, resourceType, resourceID, archivePath);
+        this.keyEntries.add(keyEntry);
+        this.keyEntriesMap.put(keyEntry.getFileName().toLowerCase(), keyEntry);
+        keyOffset += 26L;
+      }
     }
-
-    this.keyEntries = new ArrayList(keyCount);
-    this.keyEntriesMap = new HashMap(keyCount);
-    byte[] keyBuffer = new byte[26];
-    for (int i = 0; i < keyCount; i++) {
-      in.seek(keyOffset);
-      count = in.read(keyBuffer);
-      if (count != keyBuffer.length) {
-        throw new DBException("Key table truncated");
-      }
-      int nameLength;
-      for (nameLength = 1; (nameLength < 16) &&
-        (keyBuffer[nameLength] != 0); nameLength++);
-      String resourceName = new String(keyBuffer, 0, nameLength);
-      int resourceType = getShort(keyBuffer, 16);
-      int resourceID = getInteger(keyBuffer, 18);
-      int index = getInteger(keyBuffer, 22) >>> 20;
-      if (index >= this.archiveNames.size()) {
-        throw new DBException("BIF index for resource " + resourceName + " is too large");
-      }
-      String archivePath = this.file.getParent() + this.environment.getFileSeparator() + (String)this.archiveNames.get(index);
-      KeyEntry keyEntry = new KeyEntry(resourceName, resourceType, resourceID, archivePath);
-      this.keyEntries.add(keyEntry);
-      this.keyEntriesMap.put(keyEntry.getFileName().toLowerCase(), keyEntry);
-      keyOffset += 26L;
-    }
-
-    in.close();
   }
 
   public String getName()
@@ -117,7 +116,7 @@ public class KeyDatabase
 
   public KeyEntry getEntry(String fileName)
   {
-    return (KeyEntry)this.keyEntriesMap.get(fileName.toLowerCase());
+    return this.keyEntriesMap.get(fileName.toLowerCase());
   }
 
   private int getShort(byte[] buffer, int offset)

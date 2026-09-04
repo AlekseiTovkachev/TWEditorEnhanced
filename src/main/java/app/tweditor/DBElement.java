@@ -32,7 +32,7 @@ public class DBElement
     if (label != null)
       this.elementLabel = label;
     else
-      this.elementLabel = new String();
+      this.elementLabel = "";
   }
 
   public int getType()
@@ -62,7 +62,7 @@ public class DBElement
 
   public void setLabel(String label)
   {
-    this.elementLabel = (label != null ? label : new String());
+    this.elementLabel = (label != null ? label : "");
   }
 
   public Object getValue()
@@ -78,13 +78,12 @@ public class DBElement
     this.elementValue = value;
   }
 
-  public Object clone()
+  public DBElement clone()
   {
-    Object clonedObject;
+    DBElement clonedElement;
     try
     {
-      clonedObject = super.clone();
-      DBElement clonedElement = (DBElement)clonedObject;
+      clonedElement = (DBElement)super.clone();
       int type = clonedElement.getType();
       if ((type == 15) || (type == 14) || (type == 12)) {
         DBElementValue elementValue = (DBElementValue)clonedElement.getValue();
@@ -94,7 +93,7 @@ public class DBElement
       throw new UnsupportedOperationException("Unable to clone database element", exc);
     }
 
-    return clonedObject;
+    return clonedElement;
   }
 }
 

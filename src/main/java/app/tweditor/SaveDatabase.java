@@ -34,7 +34,7 @@ public class SaveDatabase
     this.file = file;
 
     String saveName = file.getName();
-    int sep = saveName.lastIndexOf(46);
+    int sep = saveName.lastIndexOf('.');
     if (sep > 0)
       saveName = saveName.substring(0, sep);
     this.saveName = saveName;
@@ -81,7 +81,7 @@ public class SaveDatabase
         if (count != length) {
           throw new DBException("Resource name truncated");
         }
-        String name = new String(buffer, 0, length, "UTF-8");
+        String name = new String(buffer, 0, length, StandardCharsets.UTF_8);
         count = in.read(buffer, 0, 8);
         if (count != 8) {
           throw new DBException("Resource table truncated");
@@ -102,14 +102,11 @@ public class SaveDatabase
     if (outputFile.exists()) {
       outputFile.delete();
     }
-    OutputStream out = new FileOutputStream(outputFile);
-    InputStream in = null;
     byte[] buffer = new byte[4096];
 
     int listOffset = this.dataOffset;
-    try
-    {
-      in = new FileInputStream(this.file);
+    try (InputStream in = new FileInputStream(this.file);
+         OutputStream out = new FileOutputStream(outputFile)) {
       int residualLength = this.dataOffset;
       while (residualLength > 0) {
         int length = Math.min(residualLength, buffer.length);
@@ -121,25 +118,22 @@ public class SaveDatabase
         residualLength -= count;
       }
 
-      in.close();
-
       for (SaveEntry entry : this.entries) {
         if (entry.isOnDisk()) {
-          in = new FileInputStream(entry.getResourceFile());
-          in.skip(entry.getResourceOffset());
-          residualLength = entry.getResourceLength();
-          listOffset += residualLength;
-          while (residualLength > 0) {
-            int length = Math.min(residualLength, buffer.length);
-            int count = in.read(buffer, 0, length);
-            if (count != length) {
-              throw new IOException("Resource data truncated for " + entry.getResourceName());
+          try (InputStream entryIn = new FileInputStream(entry.getResourceFile())) {
+            entryIn.skip(entry.getResourceOffset());
+            residualLength = entry.getResourceLength();
+            listOffset += residualLength;
+            while (residualLength > 0) {
+              int length = Math.min(residualLength, buffer.length);
+              int count = entryIn.read(buffer, 0, length);
+              if (count != length) {
+                throw new IOException("Resource data truncated for " + entry.getResourceName());
+              }
+              out.write(buffer, 0, count);
+              residualLength -= count;
             }
-            out.write(buffer, 0, count);
-            residualLength -= count;
           }
-
-          in.close();
         } else {
           List<byte[]> resourceDataList = entry.getResourceDataList();
           residualLength = entry.getResourceLength();
@@ -173,30 +167,17 @@ public class SaveDatabase
       setInteger(listOffset, buffer, 0);
       setInteger(this.entries.size(), buffer, 4);
       out.write(buffer, 0, 8);
-
-      out.close();
-      out = null;
-
-      if ((this.file.exists()) && 
-        (!this.file.delete())) {
-        throw new IOException("Unable to delete '" + this.file.getName() + "'");
-      }
-      if (!outputFile.renameTo(this.file)) {
-        throw new IOException("Unable to rename '" + outputFile.getName() + "'");
-      }
-
+    } catch (IOException exc) {
+      outputFile.delete();
+      throw exc;
     }
-    finally
-    {
-      if (in != null) {
-        in.close();
-      }
 
-      if (out != null) {
-        out.close();
-        if (outputFile.exists())
-          outputFile.delete();
-      }
+    if ((this.file.exists()) &&
+      (!this.file.delete())) {
+      throw new IOException("Unable to delete '" + this.file.getName() + "'");
+    }
+    if (!outputFile.renameTo(this.file)) {
+      throw new IOException("Unable to rename '" + outputFile.getName() + "'");
     }
   }
 

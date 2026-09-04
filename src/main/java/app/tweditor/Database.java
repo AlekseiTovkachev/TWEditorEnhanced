@@ -6,9 +6,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 public class Database
 {
@@ -40,7 +41,7 @@ public class Database
   public Database(AppEnvironment environment)
   {
     this.environment = environment;
-    this.name = new String();
+    this.name = "";
   }
 
   public Database(AppEnvironment environment, String filePath)
@@ -115,11 +116,8 @@ public class Database
     if (this.file == null) {
       throw new IllegalStateException("No database file is available");
     }
-    FileInputStream in = new FileInputStream(this.file);
-    try {
+    try (FileInputStream in = new FileInputStream(this.file)) {
       load(in);
-    } finally {
-      in.close();
     }
   }
 
@@ -215,7 +213,7 @@ public class Database
 
       }
 
-      this.topLevelStruct = decodeStruct(new String(), 0);
+      this.topLevelStruct = decodeStruct("", 0);
     }
     finally
     {
@@ -257,25 +255,25 @@ public class Database
       element = decodeStruct(label, dataOffset);
       break;
     case 0:
-      element = new DBElement(fieldType, 0, label, new Integer(dataOffset & 0xFF));
+      element = new DBElement(fieldType, 0, label, dataOffset & 0xFF);
       break;
     case 1:
-      element = new DBElement(fieldType, 0, label, new Character((char)dataOffset));
+      element = new DBElement(fieldType, 0, label, Character.valueOf((char)dataOffset));
       break;
     case 2:
-      element = new DBElement(fieldType, 0, label, new Integer(dataOffset & 0xFFFF));
+      element = new DBElement(fieldType, 0, label, dataOffset & 0xFFFF);
       break;
     case 3:
       dataOffset &= 65535;
       if (dataOffset > 32767)
         dataOffset |= -65536;
-      element = new DBElement(fieldType, 0, label, new Integer(dataOffset));
+      element = new DBElement(fieldType, 0, label, dataOffset);
       break;
     case 4:
-      element = new DBElement(fieldType, 0, label, new Long(dataOffset & 0xFFFFFFFF));
+      element = new DBElement(fieldType, 0, label, Long.valueOf(dataOffset));
       break;
     case 5:
-      element = new DBElement(fieldType, 0, label, new Integer(dataOffset));
+      element = new DBElement(fieldType, 0, label, dataOffset);
       break;
     case 6:
     case 7:
@@ -287,10 +285,10 @@ public class Database
       if ((fieldType == 6) && (longValue < 0L)) {
         throw new DBException("DWORD64 value is too large for Java representation");
       }
-      element = new DBElement(fieldType, 0, label, new Long(longValue));
+      element = new DBElement(fieldType, 0, label, Long.valueOf(longValue));
       break;
     case 8:
-      element = new DBElement(fieldType, 0, label, new Float(Float.intBitsToFloat(dataOffset)));
+      element = new DBElement(fieldType, 0, label, Float.valueOf(Float.intBitsToFloat(dataOffset)));
       break;
     case 9:
       if (dataOffset + 8 > this.fieldDataLength) {
@@ -298,7 +296,7 @@ public class Database
       }
       long longBits = this.fieldDataBuffer[(dataOffset + 0)] & 0xFF | (this.fieldDataBuffer[(dataOffset + 1)] & 0xFF) << 8 | (this.fieldDataBuffer[(dataOffset + 2)] & 0xFF) << 16 | (this.fieldDataBuffer[(dataOffset + 3)] & 0xFF) << 24 | (this.fieldDataBuffer[(dataOffset + 4)] & 0xFF) << 32 | (this.fieldDataBuffer[(dataOffset + 5)] & 0xFF) << 40 | (this.fieldDataBuffer[(dataOffset + 6)] & 0xFF) << 48 | (this.fieldDataBuffer[(dataOffset + 7)] & 0xFF) << 56;
 
-      element = new DBElement(fieldType, 0, label, new Double(Double.longBitsToDouble(longBits)));
+      element = new DBElement(fieldType, 0, label, Double.valueOf(Double.longBitsToDouble(longBits)));
       break;
     case 13:
       if (dataOffset + 4 > this.fieldDataLength) {
@@ -325,13 +323,9 @@ public class Database
         throw new DBException(this.name + ": Resource length " + resourceLength + " exceeds field data");
       String resourceString;
       if (resourceLength > 0)
-        try {
-          resourceString = new String(this.fieldDataBuffer, dataOffset, resourceLength, "UTF-8");
-        } catch (UnsupportedEncodingException exc) {
-          throw new DBException(this.name + ": UTF-8 encoding is not supported", exc);
-        }
+        resourceString = new String(this.fieldDataBuffer, dataOffset, resourceLength, StandardCharsets.UTF_8);
       else {
-        resourceString = new String();
+        resourceString = "";
       }
 
       element = new DBElement(fieldType, 0, label, resourceString);
@@ -346,13 +340,9 @@ public class Database
         throw new DBException(this.name + ": String length " + stringLength + " exceeds field data");
       String string;
       if (stringLength > 0)
-        try {
-          string = new String(this.fieldDataBuffer, dataOffset, stringLength, "UTF-8");
-        } catch (UnsupportedEncodingException exc) {
-          throw new DBException(this.name + ": UTF-8 encoding is not supported", exc);
-        }
+        string = new String(this.fieldDataBuffer, dataOffset, stringLength, StandardCharsets.UTF_8);
       else {
-        string = new String();
+        string = "";
       }
 
       element = new DBElement(fieldType, 0, label, string);
@@ -386,13 +376,9 @@ public class Database
           throw new DBException(this.name + ": Localized substring " + i + " exceeds localized string");
         String substring;
         if (substringLength > 0)
-          try {
-            substring = new String(this.fieldDataBuffer, dataOffset, substringLength, "UTF-8");
-          } catch (UnsupportedEncodingException exc) {
-            throw new DBException(this.name + ": UTF-8 encoding is not supported", exc);
-          }
+          substring = new String(this.fieldDataBuffer, dataOffset, substringLength, StandardCharsets.UTF_8);
         else {
-          substring = new String();
+          substring = "";
         }
 
         localizedString.addSubstring(new LocalizedSubstring(substring, stringID / 2, stringID & 0x1));
@@ -456,7 +442,7 @@ public class Database
       }
       int structIndex = getInteger(this.listIndicesBuffer, listOffset);
       listOffset += 4;
-      list.addElement(decodeStruct(new String(), structIndex));
+      list.addElement(decodeStruct("", structIndex));
     }
 
     return new DBElement(15, 0, label, list);
@@ -465,38 +451,28 @@ public class Database
   public void save()
     throws DBException, IOException
   {
-    File tmpFile = null;
-    FileOutputStream out = null;
     if (this.file == null) {
       throw new IllegalStateException("No database file is available");
     }
-
-    try
-    {
-      tmpFile = new File(this.file.getPath() + ".new");
-      out = new FileOutputStream(tmpFile);
+    File tmpFile = new File(this.file.getPath() + ".new");
+    boolean saved = false;
+    try (OutputStream out = new FileOutputStream(tmpFile)) {
       save(out);
-      out.close();
-      out = null;
-
-      if ((this.file.exists()) && 
-        (!this.file.delete())) {
-        throw new IOException("Unable to delete " + this.file.getName());
+      saved = true;
+    } finally {
+      if (!saved) {
+        tmpFile.delete();
       }
-      if (!tmpFile.renameTo(this.file)) {
-        throw new IOException("Unable to rename " + tmpFile.getName() + " to " + this.file.getName());
-      }
-
     }
-    finally
-    {
-      if (tmpFile != null) {
-        if (out != null) {
-          out.close();
-        }
-        if (tmpFile.exists())
-          tmpFile.delete();
-      }
+
+    if ((this.file.exists()) &&
+      (!this.file.delete())) {
+      tmpFile.delete();
+      throw new IOException("Unable to delete " + this.file.getName());
+    }
+    if (!tmpFile.renameTo(this.file)) {
+      tmpFile.delete();
+      throw new IOException("Unable to rename " + tmpFile.getName() + " to " + this.file.getName());
     }
   }
 
@@ -679,13 +655,7 @@ public class Database
       break;
     case 11:
       String resourceString = (String)fieldValue;
-      byte[] resourceData;
-      try
-      {
-        resourceData = resourceString.getBytes("UTF-8");
-      } catch (UnsupportedEncodingException exc) {
-        throw new DBException(this.name + ": UTF-8 encoding is not supported", exc);
-      }
+      byte[] resourceData = resourceString.getBytes(StandardCharsets.UTF_8);
 
       int resourceLength = resourceData.length;
       if (resourceLength > 255) {
@@ -700,12 +670,7 @@ public class Database
       String string = (String)fieldValue;
       byte[] stringBuffer;
       if (string.length() > 0) {
-        byte[] stringData;
-        try {
-          stringData = string.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException exc) {
-          throw new DBException(this.name + ": UTF-8 encoding is not supported", exc);
-        }
+        byte[] stringData = string.getBytes(StandardCharsets.UTF_8);
 
         int stringLength = stringData.length;
         stringBuffer = new byte[4 + stringLength];
@@ -722,18 +687,13 @@ public class Database
       LocalizedString localizedString = (LocalizedString)fieldValue;
       int substringCount = localizedString.getSubstringCount();
       int localizedLength = 8;
-      List substringList = new ArrayList(substringCount);
+      List<byte[]> substringList = new ArrayList<>(substringCount);
 
-      for (int i = 0; i < substringCount; i++) {
-        LocalizedSubstring localizedSubstring = localizedString.getSubstring(i);
+      for (LocalizedSubstring localizedSubstring : localizedString.getSubstrings()) {
         String substring = localizedSubstring.getString();
         byte[] substringData;
         if (substring.length() > 0)
-          try {
-            substringData = substring.getBytes("UTF-8");
-          } catch (UnsupportedEncodingException exc) {
-            throw new DBException(this.name + ": UTF-8 encoding is not supported", exc);
-          }
+          substringData = substring.getBytes(StandardCharsets.UTF_8);
         else {
           substringData = new byte[0];
         }
@@ -748,9 +708,9 @@ public class Database
       setInteger(substringCount, localizedBuffer, 8);
       int substringOffset = 12;
 
-      for (int i = 0; i < substringCount; i++) {
-        LocalizedSubstring localizedSubstring = localizedString.getSubstring(i);
-        byte[] substringData = (byte[])substringList.get(i);
+      ListIterator<byte[]> substringDataIterator = substringList.listIterator();
+      for (LocalizedSubstring localizedSubstring : localizedString.getSubstrings()) {
+        byte[] substringData = substringDataIterator.next();
         int substringLength = substringData.length;
         setInteger(localizedSubstring.getLanguage() * 2 + localizedSubstring.getGender(), localizedBuffer, substringOffset);
 

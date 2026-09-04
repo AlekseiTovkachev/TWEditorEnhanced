@@ -158,9 +158,9 @@ public class LoadFile extends Thread
 
       count = questList.getElementCount();
       List<Quest> quests = new ArrayList<>(count);
-      for (int i = 0; i < count; i++) {
-        fieldList = (DBList)questList.getElement(i).getValue();
-        String resourceName = fieldList.getString("File");
+      for (DBElement questElement : questList) {
+        DBList questFields = (DBList)questElement.getValue();
+        String resourceName = questFields.getString("File");
         fileName = resourceName + ".qst";
         saveEntry = saveDatabase.getEntry(fileName);
         if (saveEntry == null) {

@@ -44,17 +44,14 @@ public class LocalizedSubstring
     this.gender = gender;
   }
 
-  public Object clone()
+  public LocalizedSubstring clone()
   {
-    Object clonedObject;
     try
     {
-      clonedObject = super.clone();
+      return (LocalizedSubstring)super.clone();
     } catch (CloneNotSupportedException exc) {
       throw new UnsupportedOperationException("Unable to clone localized substring", exc);
     }
-
-    return clonedObject;
   }
 }
 

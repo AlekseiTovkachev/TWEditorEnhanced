@@ -13,17 +13,17 @@ public class LocalizedString extends DBElementValue
   public LocalizedString(int reference)
   {
     this.stringReference = reference;
-    this.substringList = new ArrayList(4);
+    this.substringList = new ArrayList<>(4);
   }
 
   public void addSubstring(LocalizedSubstring substring)
   {
     int language = substring.getLanguage();
     int gender = substring.getGender();
-    ListIterator li = this.substringList.listIterator();
+    ListIterator<LocalizedSubstring> li = this.substringList.listIterator();
     boolean found = false;
     while (li.hasNext()) {
-      LocalizedSubstring oldSubstring = (LocalizedSubstring)li.next();
+      LocalizedSubstring oldSubstring = li.next();
       if ((oldSubstring.getLanguage() == language) && (oldSubstring.getGender() == gender)) {
         li.set(substring);
         found = true;
@@ -52,7 +52,12 @@ public class LocalizedString extends DBElementValue
 
   public LocalizedSubstring getSubstring(int index)
   {
-    return (LocalizedSubstring)this.substringList.get(index);
+    return this.substringList.get(index);
+  }
+
+  public List<LocalizedSubstring> getSubstrings()
+  {
+    return this.substringList;
   }
 
   public void setSubstring(int index, LocalizedSubstring substring)
@@ -73,17 +78,15 @@ public class LocalizedString extends DBElementValue
     return value;
   }
 
-  public Object clone()
+  public LocalizedString clone()
   {
-    Object clonedObject = super.clone();
-    LocalizedString clonedString = (LocalizedString)clonedObject;
+    LocalizedString clonedString = (LocalizedString)super.clone();
 
-    int count = this.substringList.size();
-    clonedString.substringList = new ArrayList(count);
-    for (int i = 0; i < count; i++) {
-      clonedString.substringList.add((LocalizedSubstring)((LocalizedSubstring)this.substringList.get(i)).clone());
+    clonedString.substringList = new ArrayList<>(this.substringList.size());
+    for (LocalizedSubstring substring : this.substringList) {
+      clonedString.substringList.add(substring.clone());
     }
-    return clonedObject;
+    return clonedString;
   }
 }
 

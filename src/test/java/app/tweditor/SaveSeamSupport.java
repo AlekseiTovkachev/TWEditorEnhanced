@@ -105,8 +105,8 @@ final class SaveSeamSupport {
     DBList questDBList = (DBList) questDatabase.getTopLevelStruct().getValue();
     DBList quests = (DBList) questDBList.getElement("Quests").getValue();
     Map<String, Quest> records = new LinkedHashMap<>();
-    for (int i = 0; i < quests.getElementCount(); i++) {
-      DBList fields = (DBList) quests.getElement(i).getValue();
+    for (DBElement questElement : quests) {
+      DBList fields = (DBList) questElement.getValue();
       String resourceName = fields.getString("File");
       SaveEntry qstEntry = loaded.saveDatabase.getEntry(resourceName + ".qst");
       Database qstDatabase = new Database(loaded.environment);
