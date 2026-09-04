@@ -88,7 +88,10 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
                 checkBox.addActionListener {
                     try {
                         if (checkBox.isSelected) {
-                            session.addJournalEntry(entry.category, entry.variantIds.first())
+                            val lorePattern = entry.variantIds.filter { it.contains("/w/") || it.contains("/s/") }
+                            for (id in if (lorePattern.isEmpty()) listOf(entry.variantIds.first()) else lorePattern) {
+                                session.addJournalEntry(entry.category, id)
+                            }
                         } else {
                             session.removeJournalEntries(entry.variantIds.map { JournalEntry(entry.category, it, false) })
                         }
