@@ -23,7 +23,8 @@ public class MainWindow extends JFrame
   private boolean windowMinimized = false;
 
   private boolean titleModified = false;
-  final GameSession session = new GameSession(new File(Main.tmpDir));
+  private final AppEnvironment environment;
+  final GameSession session;
   JTabbedPane tabbedPane;
   StatsPanel statsPanel;
   AttributesPanel attributesPanel;
@@ -34,12 +35,14 @@ public class MainWindow extends JFrame
   QuestsPanel questsPanel;
   DifficultyPanel difficultyPanel;
 
-  public MainWindow()
+  public MainWindow(AppEnvironment environment)
   {
     super("The Witcher Save Editor");
+    this.environment = environment;
+    this.session = new GameSession(new File(environment.getTmpDir()));
     setDefaultCloseOperation(2);
 
-    String propValue = Main.properties.getProperty("window.main.position");
+    String propValue = environment.getProperties().getProperty("window.main.position");
     if (propValue != null) {
       int sep = propValue.indexOf(',');
       int frameX = Integer.parseInt(propValue.substring(0, sep));
@@ -49,7 +52,7 @@ public class MainWindow extends JFrame
 
     int frameWidth = 800;
     int frameHeight = 600;
-    propValue = Main.properties.getProperty("window.main.size");
+    propValue = environment.getProperties().getProperty("window.main.size");
     if (propValue != null) {
       int sep = propValue.indexOf(',');
       frameWidth = Math.max(Integer.parseInt(propValue.substring(0, sep)), frameWidth);
@@ -125,37 +128,37 @@ public class MainWindow extends JFrame
     this.tabbedPane.addTab("Stats", panel);
 
     panel = new JPanel();
-    this.attributesPanel = new AttributesPanel(this.session);
+    this.attributesPanel = new AttributesPanel(this.session, this.environment);
     panel.add(this.attributesPanel);
     this.tabbedPane.addTab("Attributes", panel);
 
     panel = new JPanel();
-    this.signsPanel = new SignsPanel(this.session);
+    this.signsPanel = new SignsPanel(this.session, this.environment);
     panel.add(this.signsPanel);
     this.tabbedPane.addTab("Signs", panel);
 
     panel = new JPanel();
-    this.stylesPanel = new StylesPanel(this.session);
+    this.stylesPanel = new StylesPanel(this.session, this.environment);
     panel.add(this.stylesPanel);
     this.tabbedPane.addTab("Styles", panel);
 
     panel = new JPanel();
-    this.equipPanel = new EquipPanel(this.session);
+    this.equipPanel = new EquipPanel(this.session, this.environment);
     panel.add(this.equipPanel);
     this.tabbedPane.addTab("Equipment", panel);
 
     panel = new JPanel();
-    this.inventoryPanel = new InventoryPanel(this.session);
+    this.inventoryPanel = new InventoryPanel(this.session, this.environment);
     panel.add(this.inventoryPanel);
     this.tabbedPane.addTab("Inventory", panel);
 
     panel = new JPanel();
-    this.questsPanel = new QuestsPanel(this.session);
+    this.questsPanel = new QuestsPanel(this.session, this.environment);
     panel.add(this.questsPanel);
     this.tabbedPane.addTab("Quests", panel);
 
     panel = new JPanel();
-    this.difficultyPanel = new DifficultyPanel(this.session);
+    this.difficultyPanel = new DifficultyPanel(this.session, this.environment);
     panel.add(this.difficultyPanel);
     this.tabbedPane.addTab("Difficulty", panel);
 
@@ -219,25 +222,25 @@ public class MainWindow extends JFrame
       return;
     }
 
-    String currentDirectory = Main.properties.getProperty("current.directory");
+    String currentDirectory = environment.getProperties().getProperty("current.directory");
     JFileChooser chooser;
     if (currentDirectory != null) {
       File dirFile = new File(currentDirectory);
       if ((dirFile.exists()) && (dirFile.isDirectory()))
         chooser = new JFileChooser(dirFile);
       else
-        chooser = new JFileChooser(Main.gamePath + Main.fileSeparator + "saves");
+        chooser = new JFileChooser(environment.getGamePath() + environment.getFileSeparator() + "saves");
     } else {
-      chooser = new JFileChooser(Main.gamePath + Main.fileSeparator + "saves");
+      chooser = new JFileChooser(environment.getGamePath() + environment.getFileSeparator() + "saves");
     }
 
-    chooser.putClientProperty("FileChooser.useShellFolder", Boolean.valueOf(Main.useShellFolder));
+    chooser.putClientProperty("FileChooser.useShellFolder", Boolean.valueOf(environment.isUseShellFolder()));
     chooser.setDialogTitle("Select Save File");
     if (chooser.showOpenDialog(this) != 0) {
       return;
     }
     File file = chooser.getSelectedFile();
-    Main.properties.setProperty("current.directory", file.getParent());
+    environment.getProperties().setProperty("current.directory", file.getParent());
 
     loadSave(file);
   }
@@ -251,7 +254,7 @@ public class MainWindow extends JFrame
     }
 
     ProgressDialog dialog = new ProgressDialog(this, "Loading " + saveName);
-    LoadFile task = new LoadFile(dialog, this.session, file);
+    LoadFile task = new LoadFile(dialog, this.session, this.environment, file);
     task.start();
     boolean success = dialog.showDialog();
 
@@ -307,7 +310,7 @@ public class MainWindow extends JFrame
       this.difficultyPanel.getFields(list);
 
       ProgressDialog dialog = new ProgressDialog(this, "Saving " + this.session.getSaveDatabase().getName());
-      SaveFile task = new SaveFile(dialog, this.session);
+      SaveFile task = new SaveFile(dialog, this.session, this.environment);
       task.start();
       saved = dialog.showDialog();
       if (saved)
@@ -345,7 +348,7 @@ public class MainWindow extends JFrame
 
   private void unpackSave()
   {
-    String extractDirectory = Main.properties.getProperty("extract.directory");
+    String extractDirectory = environment.getProperties().getProperty("extract.directory");
     JFileChooser chooser;
     if (extractDirectory != null) {
       File dirFile = new File(extractDirectory);
@@ -357,7 +360,7 @@ public class MainWindow extends JFrame
       chooser = new JFileChooser();
     }
 
-    chooser.putClientProperty("FileChooser.useShellFolder", Boolean.valueOf(Main.useShellFolder));
+    chooser.putClientProperty("FileChooser.useShellFolder", Boolean.valueOf(environment.isUseShellFolder()));
     chooser.setDialogTitle("Select Destination Directory");
     chooser.setApproveButtonText("Select");
     chooser.setFileSelectionMode(1);
@@ -365,13 +368,13 @@ public class MainWindow extends JFrame
       return;
     }
     File dirFile = chooser.getSelectedFile();
-    Main.properties.setProperty("extract.directory", dirFile.getPath());
+    environment.getProperties().setProperty("extract.directory", dirFile.getPath());
     if (!dirFile.exists()) {
       dirFile.mkdirs();
     }
 
     ProgressDialog dialog = new ProgressDialog(this, "Unpacking " + this.session.getSaveDatabase().getName());
-    UnpackSave task = new UnpackSave(dialog, this.session, dirFile);
+    UnpackSave task = new UnpackSave(dialog, this.session, this.environment, dirFile);
     task.start();
     if (dialog.showDialog())
       JOptionPane.showMessageDialog(this, "Save game unpacked to " + dirFile.getPath(), "Save Unpacked", 1);
@@ -388,7 +391,7 @@ public class MainWindow extends JFrame
 
     }
 
-    String extractDirectory = Main.properties.getProperty("extract.directory");
+    String extractDirectory = environment.getProperties().getProperty("extract.directory");
     JFileChooser chooser;
     if (extractDirectory != null) {
       File dirFile = new File(extractDirectory);
@@ -400,7 +403,7 @@ public class MainWindow extends JFrame
       chooser = new JFileChooser();
     }
 
-    chooser.putClientProperty("FileChooser.useShellFolder", Boolean.valueOf(Main.useShellFolder));
+    chooser.putClientProperty("FileChooser.useShellFolder", Boolean.valueOf(environment.isUseShellFolder()));
     chooser.setDialogTitle("Select Source Directory");
     chooser.setApproveButtonText("Select");
     chooser.setFileSelectionMode(1);
@@ -408,7 +411,7 @@ public class MainWindow extends JFrame
       return;
     }
     File dirFile = chooser.getSelectedFile();
-    Main.properties.setProperty("extract.directory", dirFile.getPath());
+    environment.getProperties().setProperty("extract.directory", dirFile.getPath());
     if (!dirFile.exists()) {
       JOptionPane.showMessageDialog(this, "Source directory does not exist", "Directory not found", 0);
 
@@ -417,7 +420,7 @@ public class MainWindow extends JFrame
 
     this.session.setDataModified(false);
     ProgressDialog dialog = new ProgressDialog(this, "Packing " + this.session.getSaveDatabase().getName());
-    PackFile task = new PackFile(dialog, this.session, dirFile);
+    PackFile task = new PackFile(dialog, this.session, this.environment, dirFile);
     task.start();
     boolean saved = dialog.showDialog();
 
@@ -441,11 +444,11 @@ public class MainWindow extends JFrame
     if (!this.windowMinimized) {
       Point p = Main.mainWindow.getLocation();
       Dimension d = Main.mainWindow.getSize();
-      Main.properties.setProperty("window.main.position", p.x + "," + p.y);
-      Main.properties.setProperty("window.main.size", d.width + "," + d.height);
+      environment.getProperties().setProperty("window.main.position", p.x + "," + p.y);
+      environment.getProperties().setProperty("window.main.size", d.width + "," + d.height);
     }
 
-    Main.saveProperties();
+    environment.saveProperties();
 
     System.exit(0);
   }
@@ -483,16 +486,16 @@ public class MainWindow extends JFrame
     info.append(System.getProperty("java.class.path"));
 
     info.append("<br><br>TW install path: ");
-    info.append(Main.installPath);
+    info.append(environment.getInstallPath());
 
     info.append("<br>TW data path: ");
-    info.append(Main.gamePath);
+    info.append(environment.getGamePath());
 
     info.append("<br>Temporary data path: ");
-    info.append(Main.tmpDir);
+    info.append(environment.getTmpDir());
 
     info.append("<br>Language identifier: ");
-    info.append(Main.languageID);
+    info.append(environment.getLanguageID());
 
     info.append("</html>");
     JOptionPane.showMessageDialog(this, info.toString(), "About The Witcher Save Editor", 1);

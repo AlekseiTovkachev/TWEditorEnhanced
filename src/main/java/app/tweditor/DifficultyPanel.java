@@ -22,10 +22,12 @@ public class DifficultyPanel extends JPanel
   private JRadioButton easyButton, mediumButton, hardButton;
   private String level;
   private final GameSession session;
+  private final AppEnvironment environment;
 
-  public DifficultyPanel(GameSession session)
+  public DifficultyPanel(GameSession session, AppEnvironment environment)
   {
     this.session = session;
+    this.environment = environment;
     easyButton = new JRadioButton(EASY);
     easyButton.setActionCommand(EASY);
     easyButton.addActionListener(this);
@@ -82,7 +84,7 @@ public class DifficultyPanel extends JPanel
           DBElement e = fieldList.getElement(0);
           Object value = e.getValue();
           if(value.equals("StyleSilverGroup1")) {
-            DBList levelList = new DBList(2);
+            DBList levelList = new DBList(this.environment, 2);
             if(cmd.equals(EASY)) {
               levelList.addElement(new DBElement(10, 0, "RnAbName", EASY_DIFF));
             } else if(cmd.equals(MEDIUM)) {

@@ -15,15 +15,18 @@ public class KeyDatabase
   private Map<String, KeyEntry> keyEntriesMap;
   private List<String> archiveNames;
 
-  public KeyDatabase(String filePath)
+  private final AppEnvironment environment;
+
+  public KeyDatabase(AppEnvironment environment, String filePath)
     throws DBException, IOException
   {
-    this(new File(filePath));
+    this(environment, new File(filePath));
   }
 
-  public KeyDatabase(File file)
+  public KeyDatabase(AppEnvironment environment, File file)
     throws DBException, IOException
   {
+    this.environment = environment;
     this.file = file;
     readFile();
   }
@@ -92,7 +95,7 @@ public class KeyDatabase
       if (index >= this.archiveNames.size()) {
         throw new DBException("BIF index for resource " + resourceName + " is too large");
       }
-      String archivePath = this.file.getParent() + Main.fileSeparator + (String)this.archiveNames.get(index);
+      String archivePath = this.file.getParent() + this.environment.getFileSeparator() + (String)this.archiveNames.get(index);
       KeyEntry keyEntry = new KeyEntry(resourceName, resourceType, resourceID, archivePath);
       this.keyEntries.add(keyEntry);
       this.keyEntriesMap.put(keyEntry.getFileName().toLowerCase(), keyEntry);

@@ -26,10 +26,12 @@ public class AttributesPanel extends JPanel
   private JCheckBox[][][] fields;
   private JTabbedPane tabbedPane;
   private final GameSession session;
+  private final AppEnvironment environment;
 
-  public AttributesPanel(GameSession session)
+  public AttributesPanel(GameSession session, AppEnvironment environment)
   {
     this.session = session;
+    this.environment = environment;
     this.tabbedPane = new JTabbedPane();
     int tabs = fieldNames.length;
     int rows = fieldNames[0].length;
@@ -96,7 +98,7 @@ public class AttributesPanel extends JPanel
         }
 
         if (addAbility) {
-          DBList fieldList = new DBList(2);
+          DBList fieldList = new DBList(this.environment, 2);
           fieldList.addElement(new DBElement(10, 0, "RnAbName", abilityLabel));
           fieldList.addElement(new DBElement(0, 0, "RnAbStk", new Integer(0)));
           list.addElement(new DBElement(14, 48879, "", fieldList));
@@ -104,7 +106,7 @@ public class AttributesPanel extends JPanel
           for (int i = 0; i < associatedLabels.length; i++) {
             if (abilityLabel.equals(associatedLabels[i][0])) {
               String associatedLabel = associatedLabels[i][1];
-              fieldList = new DBList(2);
+              fieldList = new DBList(this.environment, 2);
               fieldList.addElement(new DBElement(10, 0, "RnAbName", associatedLabel));
               fieldList.addElement(new DBElement(0, 0, "RnAbStk", new Integer(0)));
               list.addElement(new DBElement(14, 48879, "", fieldList));

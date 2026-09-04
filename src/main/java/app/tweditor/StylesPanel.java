@@ -24,10 +24,12 @@ public class StylesPanel extends JPanel
   private JCheckBox[][][] fields;
   private JTabbedPane tabbedPane;
   private final GameSession session;
+  private final AppEnvironment environment;
 
-  public StylesPanel(GameSession session)
+  public StylesPanel(GameSession session, AppEnvironment environment)
   {
     this.session = session;
+    this.environment = environment;
     this.tabbedPane = new JTabbedPane();
     int tabs = fieldNames.length;
     int rows = fieldNames[0].length;
@@ -94,7 +96,7 @@ public class StylesPanel extends JPanel
         }
 
         if (addAbility) {
-          DBList fieldList = new DBList(2);
+          DBList fieldList = new DBList(this.environment, 2);
           fieldList.addElement(new DBElement(10, 0, "RnAbName", abilityLabel));
           fieldList.addElement(new DBElement(0, 0, "RnAbStk", new Integer(0)));
           list.addElement(new DBElement(14, 48879, "", fieldList));

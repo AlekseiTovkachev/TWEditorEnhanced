@@ -15,9 +15,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class LocalSavesRoundTripTest {
 
+  static AppEnvironment environment;
+
   @BeforeAll
   static void init() {
-    SaveSeamSupport.initSeam();
+    environment = SaveSeamSupport.createEnvironment();
   }
 
   @Test
@@ -30,7 +32,7 @@ class LocalSavesRoundTripTest {
     for (int i = 0; i < saves.length; i++) {
       Path workDir = Files.createDirectory(tempDir.resolve("save-" + i));
       File save = Files.copy(saves[i].toPath(), workDir.resolve(saves[i].getName())).toFile();
-      SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(save, workDir);
+      SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(environment, save, workDir);
       int questCount = loaded.questCount;
       int experience = loaded.player.getInteger("Experience");
       int hitPoints = loaded.player.getInteger("CurrentHitPoints");
@@ -45,7 +47,7 @@ class LocalSavesRoundTripTest {
       assertTrue(allowedToChange.containsAll(rewritten),
           save.getName() + ": entries outside the module .sav container, player.utc and the .smm file changed: " + rewritten);
 
-      SaveSeamSupport.Loaded reloaded = SaveSeamSupport.load(save, workDir);
+      SaveSeamSupport.Loaded reloaded = SaveSeamSupport.load(environment, save, workDir);
       assertEquals(questCount, reloaded.questCount, save.getName());
       assertEquals(experience, reloaded.player.getInteger("Experience"), save.getName());
       assertEquals(hitPoints, reloaded.player.getInteger("CurrentHitPoints"), save.getName());

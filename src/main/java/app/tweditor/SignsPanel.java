@@ -26,10 +26,12 @@ public class SignsPanel extends JPanel
   private JCheckBox[][][] fields;
   private JTabbedPane tabbedPane;
   private final GameSession session;
+  private final AppEnvironment environment;
 
-  public SignsPanel(GameSession session)
+  public SignsPanel(GameSession session, AppEnvironment environment)
   {
     this.session = session;
+    this.environment = environment;
     this.tabbedPane = new JTabbedPane();
     int tabs = fieldNames.length;
     int rows = fieldNames[0].length;
@@ -103,7 +105,7 @@ public class SignsPanel extends JPanel
         }
 
         if (addSign) {
-          DBList fieldList = new DBList(2);
+          DBList fieldList = new DBList(this.environment, 2);
           fieldList.addElement(new DBElement(10, 0, "RnAbName", abilityLabel));
           fieldList.addElement(new DBElement(0, 0, "RnAbStk", new Integer(0)));
           list.addElement(new DBElement(14, 48879, "", fieldList));
@@ -130,11 +132,11 @@ public class SignsPanel extends JPanel
 
             if (!updatedSpell) {
               if (list == null) {
-                list = new DBList(1);
+                list = new DBList(this.environment, 1);
                 playerList.addElement(new DBElement(15, 0, "KnownList0", list));
               }
 
-              fieldList = new DBList(1);
+              fieldList = new DBList(this.environment, 1);
               element = new DBElement(2, 0, "Spell", new Integer(low + 2 * col + row));
               fieldList.addElement(element);
               list.addElement(new DBElement(14, 2, "", fieldList));

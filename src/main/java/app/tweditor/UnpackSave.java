@@ -11,13 +11,15 @@ public class UnpackSave extends Thread
 {
   private ProgressDialog progressDialog;
   private final GameSession session;
+  private final AppEnvironment environment;
   private File dirFile;
   private boolean unpackSuccessful = false;
 
-  public UnpackSave(ProgressDialog dialog, GameSession session, File dirFile)
+  public UnpackSave(ProgressDialog dialog, GameSession session, AppEnvironment environment, File dirFile)
   {
     this.progressDialog = dialog;
     this.session = session;
+    this.environment = environment;
     this.dirFile = dirFile;
   }
 
@@ -35,7 +37,7 @@ public class UnpackSave extends Thread
       for (Object entryObj : entries) {
         SaveEntry entry = (SaveEntry)entryObj;
         String resourceName = entry.getResourceName();
-        file = new File(this.dirFile.getPath() + Main.fileSeparator + resourceName);
+        file = new File(this.dirFile.getPath() + this.environment.getFileSeparator() + resourceName);
         if ((file.exists()) &&
           (!file.delete())) {
           throw new IOException("Unable to delete '" + file.getName() + "'");

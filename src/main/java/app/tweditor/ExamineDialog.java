@@ -18,11 +18,13 @@ public class ExamineDialog extends JDialog
 {
   private JScrollPane scrollPane;
   private JTextPane textPane;
+  private final AppEnvironment environment;
 
-  public ExamineDialog(JFrame parent, String label, String description)
+  public ExamineDialog(JFrame parent, AppEnvironment environment, String label, String description)
   {
     super(parent, label, true);
     setDefaultCloseOperation(2);
+    this.environment = environment;
 
     StringBuilder stringBuilder = new StringBuilder(description);
     stringBuilder.insert(0, "<html>");
@@ -51,7 +53,7 @@ public class ExamineDialog extends JDialog
       else if ((control.length() >= 7) && (control.substring(0, 7).equals("strref:"))) {
         try {
           int refid = Integer.parseInt(control.substring(7));
-          strref = Main.stringsDatabase.getString(refid);
+          strref = this.environment.getStringsDatabase().getString(refid);
         } catch (NumberFormatException exc) {
           strref = "";
         }
@@ -118,9 +120,9 @@ public class ExamineDialog extends JDialog
     }
   }
 
-  public static void showDialog(JFrame parent, String label, String description)
+  public static void showDialog(JFrame parent, AppEnvironment environment, String label, String description)
   {
-    ExamineDialog dialog = new ExamineDialog(parent, label, description);
+    ExamineDialog dialog = new ExamineDialog(parent, environment, label, description);
     dialog.pack();
     dialog.setLocationRelativeTo(parent);
     dialog.setVisible(true);

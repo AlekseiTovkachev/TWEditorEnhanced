@@ -12,6 +12,7 @@ import java.util.List;
 
 public class Database
 {
+  private final AppEnvironment environment;
   private File file;
   private String name;
   private String fileType;
@@ -36,18 +37,20 @@ public class Database
   private int listIndicesSize;
   private int listIndicesLength;
 
-  public Database()
+  public Database(AppEnvironment environment)
   {
+    this.environment = environment;
     this.name = new String();
   }
 
-  public Database(String filePath)
+  public Database(AppEnvironment environment, String filePath)
   {
-    this(new File(filePath));
+    this(environment, new File(filePath));
   }
 
-  public Database(File file)
+  public Database(AppEnvironment environment, File file)
   {
+    this.environment = environment;
     this.file = file;
     this.name = file.getName();
   }
@@ -417,7 +420,7 @@ public class Database
     int id = getInteger(this.structBuffer, offset);
     int fieldIndex = getInteger(this.structBuffer, offset + 4);
     int fieldCount = getInteger(this.structBuffer, offset + 8);
-    DBList list = new DBList(fieldCount);
+    DBList list = new DBList(this.environment, fieldCount);
     if (fieldCount == 1) {
       DBElement field = decodeField(fieldIndex);
       list.addElement(field);
@@ -445,7 +448,7 @@ public class Database
     }
 
     int structCount = getInteger(this.listIndicesBuffer, offset);
-    DBList list = new DBList(structCount);
+    DBList list = new DBList(this.environment, structCount);
     int listOffset = offset + 4;
     for (int i = 0; i < structCount; i++) {
       if (listOffset + 4 > this.listIndicesLength) {

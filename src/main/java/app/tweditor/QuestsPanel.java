@@ -26,10 +26,12 @@ public class QuestsPanel extends JPanel
   private List<Quest> notStartedList;
   private JList notStartedField;
   private final GameSession session;
+  private final AppEnvironment environment;
 
-  public QuestsPanel(GameSession session)
+  public QuestsPanel(GameSession session, AppEnvironment environment)
   {
     this.session = session;
+    this.environment = environment;
     this.tabbedPane = new JTabbedPane(2);
 
     this.startedField = new JList();
@@ -204,7 +206,7 @@ public class QuestsPanel extends JPanel
 
     description.append("Quest file: ");
     description.append(quest.getResourceName());
-    ExamineDialog.showDialog(Main.mainWindow, quest.getQuestName(), description.toString());
+    ExamineDialog.showDialog(Main.mainWindow, this.environment, quest.getQuestName(), description.toString());
   }
 
   private DBList locateSubquest(DBList fieldList)

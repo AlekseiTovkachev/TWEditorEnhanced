@@ -21,9 +21,11 @@ final class SaveSeamSupport {
   private SaveSeamSupport() {
   }
 
-  static void initSeam() {
-    Main.fileSeparator = System.getProperty("file.separator");
-    Main.languageID = 3;
+  static AppEnvironment createEnvironment() {
+    AppEnvironment environment = new AppEnvironment();
+    environment.setFileSeparator(System.getProperty("file.separator"));
+    environment.setLanguageID(3);
+    return environment;
   }
 
   static File copyFixtureTo(Path directory) throws Exception {
@@ -36,17 +38,17 @@ final class SaveSeamSupport {
     return target.toFile();
   }
 
-  static Loaded load(File saveFile, Path workDir) throws Exception {
-    Loaded loaded = new Loaded(workDir);
-    loaded.saveDatabase = new SaveDatabase(saveFile);
+  static Loaded load(AppEnvironment environment, File saveFile, Path workDir) throws Exception {
+    Loaded loaded = new Loaded(workDir, environment);
+    loaded.saveDatabase = new SaveDatabase(environment, saveFile);
     loaded.saveDatabase.load();
     String saveName = loaded.saveDatabase.getName();
-    loaded.saveDatabase.setSavePrefix(saveName + Main.fileSeparator);
+    loaded.saveDatabase.setSavePrefix(saveName + environment.getFileSeparator());
     loaded.smmName = "save_" + saveName.substring(0, 6) + ".smm";
 
     loaded.smmFile = workDir.resolve("work-" + saveName.substring(0, 6) + ".smm").toFile();
     extract(loaded.saveDatabase.getEntry(loaded.smmName), loaded.smmFile);
-    loaded.smmDatabase = new Database(loaded.smmFile);
+    loaded.smmDatabase = new Database(environment, loaded.smmFile);
     loaded.smmDatabase.load();
     DBList smmList = (DBList) loaded.smmDatabase.getTopLevelStruct().getValue();
     String startingMod = smmList.getString("StartingMod");
@@ -64,14 +66,14 @@ final class SaveSeamSupport {
     try (InputStream in = loaded.modDatabase.getEntry("module.ifo").getInputStream()) {
       Files.copy(in, loaded.ifoFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
     }
-    loaded.ifoDatabase = new Database(loaded.ifoFile);
+    loaded.ifoDatabase = new Database(environment, loaded.ifoFile);
     loaded.ifoDatabase.load();
     DBList ifoList = (DBList) loaded.ifoDatabase.getTopLevelStruct().getValue();
     DBList playerList = (DBList) ifoList.getElement("Mod_PlayerList").getValue();
     loaded.player = (DBList) playerList.getElement(0).getValue();
 
     SaveEntry qdbEntry = loaded.saveDatabase.getEntry(loaded.questDBName + ".qdb");
-    Database questDatabase = new Database();
+    Database questDatabase = new Database(environment);
     try (InputStream in = qdbEntry.getInputStream()) {
       questDatabase.load(in);
     }
@@ -80,7 +82,7 @@ final class SaveSeamSupport {
 
     loaded.playerFile = workDir.resolve("work-" + saveName.substring(0, 6) + ".utc").toFile();
     extract(loaded.saveDatabase.getEntry("player.utc"), loaded.playerFile);
-    loaded.playerDatabase = new Database(loaded.playerFile);
+    loaded.playerDatabase = new Database(environment, loaded.playerFile);
     loaded.playerDatabase.load();
 
     loaded.session.setSaveDatabase(loaded.saveDatabase);
@@ -96,7 +98,7 @@ final class SaveSeamSupport {
 
   static Map<String, Quest> questRecords(Loaded loaded) throws Exception {
     SaveEntry qdbEntry = loaded.saveDatabase.getEntry(loaded.questDBName + ".qdb");
-    Database questDatabase = new Database();
+    Database questDatabase = new Database(loaded.environment);
     try (InputStream in = qdbEntry.getInputStream()) {
       questDatabase.load(in);
     }
@@ -107,7 +109,7 @@ final class SaveSeamSupport {
       DBList fields = (DBList) quests.getElement(i).getValue();
       String resourceName = fields.getString("File");
       SaveEntry qstEntry = loaded.saveDatabase.getEntry(resourceName + ".qst");
-      Database qstDatabase = new Database();
+      Database qstDatabase = new Database(loaded.environment);
       try (InputStream in = qstEntry.getInputStream()) {
         qstDatabase.load(in);
       }
@@ -133,7 +135,7 @@ final class SaveSeamSupport {
     loaded.saveDatabase.addEntry(loaded.smmName, loaded.smmFile);
     loaded.saveDatabase.save();
 
-    SaveDatabase saveDatabase = new SaveDatabase(loaded.saveDatabase.getPath());
+    SaveDatabase saveDatabase = new SaveDatabase(loaded.environment, loaded.saveDatabase.getPath());
     saveDatabase.load();
     loaded.saveDatabase = saveDatabase;
     loaded.session.setSaveDatabase(saveDatabase);
@@ -177,6 +179,7 @@ final class SaveSeamSupport {
   }
 
   static final class Loaded {
+    final AppEnvironment environment;
     final GameSession session;
     SaveDatabase saveDatabase;
     Database smmDatabase;
@@ -193,7 +196,8 @@ final class SaveSeamSupport {
     File ifoFile;
     File playerFile;
 
-    Loaded(Path workDir) {
+    Loaded(Path workDir, AppEnvironment environment) {
+      this.environment = environment;
       this.session = new GameSession(workDir.toFile());
     }
   }

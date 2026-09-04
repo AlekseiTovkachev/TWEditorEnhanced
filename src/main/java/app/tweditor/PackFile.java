@@ -11,13 +11,15 @@ public class PackFile extends Thread
 {
   private final ProgressDialog progressDialog;
   private final GameSession session;
+  private final AppEnvironment environment;
   private final File extractDirectory;
   private boolean saveSuccessful = false;
 
-  public PackFile(ProgressDialog dialog, GameSession session, File dirFile)
+  public PackFile(ProgressDialog dialog, GameSession session, AppEnvironment environment, File dirFile)
   {
     this.progressDialog = dialog;
     this.session = session;
+    this.environment = environment;
     this.extractDirectory = dirFile;
   }
 
@@ -29,7 +31,7 @@ public class PackFile extends Thread
     try
     {
       for (SaveEntry entry : entries) {
-        File file = new File(this.extractDirectory.getPath() + Main.fileSeparator + entry.getResourceName());
+        File file = new File(this.extractDirectory.getPath() + this.environment.getFileSeparator() + entry.getResourceName());
         if ((!file.exists()) || (!file.isFile())) {
           throw new IOException("Resource '" + file.getPath() + "' not found");
         }

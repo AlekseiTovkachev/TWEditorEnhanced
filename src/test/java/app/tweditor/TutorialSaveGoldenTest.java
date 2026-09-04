@@ -14,15 +14,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TutorialSaveGoldenTest {
 
+  static AppEnvironment environment;
+
   @BeforeAll
   static void init() {
-    SaveSeamSupport.initSeam();
+    environment = SaveSeamSupport.createEnvironment();
   }
 
   @Test
   void fixtureIsRecognizedAsAValidSaveArchive(@TempDir Path tempDir) throws Exception {
     File save = SaveSeamSupport.copyFixtureTo(tempDir);
-    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(save, tempDir);
+    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(environment, save, tempDir);
 
     assertEquals(SaveSeamSupport.EXPECTED_SAVE_NAME, loaded.saveDatabase.getName());
     assertTrue(loaded.saveDatabase.getName().matches("\\d{6} .*"),
@@ -45,7 +47,7 @@ class TutorialSaveGoldenTest {
   @Test
   void parsedPlayerFactsMatchTheFixture(@TempDir Path tempDir) throws Exception {
     File save = SaveSeamSupport.copyFixtureTo(tempDir);
-    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(save, tempDir);
+    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(environment, save, tempDir);
 
     assertEquals(0, loaded.player.getInteger("ExpLevel"));
     assertEquals(30, loaded.player.getInteger("Experience"));
@@ -67,7 +69,7 @@ class TutorialSaveGoldenTest {
   @Test
   void parsedQuestFactsMatchTheFixture(@TempDir Path tempDir) throws Exception {
     File save = SaveSeamSupport.copyFixtureTo(tempDir);
-    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(save, tempDir);
+    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(environment, save, tempDir);
     Map<String, Quest> records = SaveSeamSupport.questRecords(loaded);
 
     assertEquals(137, loaded.questCount);
@@ -82,14 +84,14 @@ class TutorialSaveGoldenTest {
   @Test
   void roundTripLeavesUntouchedEntriesByteIdentical(@TempDir Path tempDir) throws Exception {
     File save = SaveSeamSupport.copyFixtureTo(tempDir);
-    SaveDatabase pristine = new SaveDatabase(save);
+    SaveDatabase pristine = new SaveDatabase(environment, save);
     pristine.load();
     Map<String, Long> before = SaveSeamSupport.entryDigests(pristine);
 
-    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(save, tempDir);
+    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(environment, save, tempDir);
     SaveSeamSupport.save(loaded);
 
-    SaveDatabase repacked = new SaveDatabase(save);
+    SaveDatabase repacked = new SaveDatabase(environment, save);
     repacked.load();
     Map<String, Long> after = SaveSeamSupport.entryDigests(repacked);
 
@@ -102,10 +104,10 @@ class TutorialSaveGoldenTest {
   @Test
   void roundTripReparsesWithSameFacts(@TempDir Path tempDir) throws Exception {
     File save = SaveSeamSupport.copyFixtureTo(tempDir);
-    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(save, tempDir);
+    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(environment, save, tempDir);
     SaveSeamSupport.save(loaded);
 
-    SaveSeamSupport.Loaded reloaded = SaveSeamSupport.load(save, tempDir);
+    SaveSeamSupport.Loaded reloaded = SaveSeamSupport.load(environment, save, tempDir);
     assertEquals(0, reloaded.player.getInteger("ExpLevel"));
     assertEquals(30, reloaded.player.getInteger("Experience"));
     assertEquals(0, reloaded.player.getInteger("Gold"));
@@ -123,12 +125,12 @@ class TutorialSaveGoldenTest {
   @Test
   void editedGoldPersistsThroughRoundTrip(@TempDir Path tempDir) throws Exception {
     File save = SaveSeamSupport.copyFixtureTo(tempDir);
-    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(save, tempDir);
+    SaveSeamSupport.Loaded loaded = SaveSeamSupport.load(environment, save, tempDir);
 
     loaded.player.setInteger("Gold", 500);
     SaveSeamSupport.save(loaded);
 
-    SaveSeamSupport.Loaded reloaded = SaveSeamSupport.load(save, tempDir);
+    SaveSeamSupport.Loaded reloaded = SaveSeamSupport.load(environment, save, tempDir);
     assertEquals(500, reloaded.player.getInteger("Gold"));
     assertEquals(30, reloaded.player.getInteger("Experience"));
     assertEquals(248, reloaded.player.getInteger("CurrentHitPoints"));

@@ -37,10 +37,12 @@ public class EquipPanel extends JPanel
   private JTree availField;
   private boolean availDone = false;
   private final GameSession session;
+  private final AppEnvironment environment;
 
-  public EquipPanel(GameSession session)
+  public EquipPanel(GameSession session, AppEnvironment environment)
   {
     this.session = session;
+    this.environment = environment;
     this.rootNode = new DefaultMutableTreeNode("Items");
 
     this.categoryNodes = new CategoryNode[categories.length];
@@ -180,7 +182,7 @@ public class EquipPanel extends JPanel
       description.append(string);
     }
 
-    ExamineDialog.showDialog(Main.mainWindow, label, description.toString());
+    ExamineDialog.showDialog(Main.mainWindow, this.environment, label, description.toString());
   }
 
   private void removeSelectedItem()
@@ -275,7 +277,7 @@ public class EquipPanel extends JPanel
     element = list.getElement("Equip_ItemList");
     DBList itemList;
     if (element == null) {
-      itemList = new DBList(10);
+      itemList = new DBList(this.environment, 10);
       element = new DBElement(15, 0, "Equip_ItemList", itemList);
       list.addElement(element);
     } else {
@@ -299,7 +301,7 @@ public class EquipPanel extends JPanel
     DBList itemList = null;
 
     if (!this.availDone) {
-      for (ItemTemplate itemTemplate : Main.itemTemplates) {
+      for (ItemTemplate itemTemplate : this.environment.getItemTemplates()) {
         int baseItem = itemTemplate.getBaseItem();
         for (int i = 0; i < categoryMappings.length; i++) {
           if (categoryMappings[i][0] == baseItem) {

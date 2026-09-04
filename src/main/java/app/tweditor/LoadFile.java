@@ -12,13 +12,15 @@ public class LoadFile extends Thread
 {
   private final ProgressDialog progressDialog;
   private final GameSession session;
+  private final AppEnvironment environment;
   private File file;
   private boolean loadSuccessful = false;
 
-  public LoadFile(ProgressDialog dialog, GameSession session, File file)
+  public LoadFile(ProgressDialog dialog, GameSession session, AppEnvironment environment, File file)
   {
     this.progressDialog = dialog;
     this.session = session;
+    this.environment = environment;
     this.file = file;
   }
 
@@ -28,11 +30,11 @@ public class LoadFile extends Thread
     FileOutputStream out = null;
     try
     {
-      SaveDatabase saveDatabase = new SaveDatabase(this.file);
+      SaveDatabase saveDatabase = new SaveDatabase(this.environment, this.file);
       saveDatabase.load();
       this.progressDialog.updateProgress(25);
       String saveName = saveDatabase.getName();
-      saveDatabase.setSavePrefix(saveName + Main.fileSeparator);
+      saveDatabase.setSavePrefix(saveName + this.environment.getFileSeparator());
 
       int sep = saveName.indexOf(' ');
       if ((sep != 6) || (!Character.isDigit(saveName.charAt(0)))) {
@@ -57,7 +59,7 @@ public class LoadFile extends Thread
       in = null;
       out.close();
       out = null;
-      Database smmDatabase = new Database(this.session.getSmmFile());
+      Database smmDatabase = new Database(this.environment, this.session.getSmmFile());
       smmDatabase.load();
       this.progressDialog.updateProgress(35);
 
@@ -123,7 +125,7 @@ public class LoadFile extends Thread
       out = null;
       this.progressDialog.updateProgress(75);
 
-      Database database = new Database(this.session.getDatabaseFile());
+      Database database = new Database(this.environment, this.session.getDatabaseFile());
       database.load();
       list = (DBList)database.getTopLevelStruct().getValue();
       element = list.getElement("Mod_PlayerList");
@@ -142,7 +144,7 @@ public class LoadFile extends Thread
         throw new DBException("Save does not contain " + fileName);
       }
       in = saveEntry.getInputStream();
-      Database questDatabase = new Database();
+      Database questDatabase = new Database(this.environment);
       questDatabase.load(in);
       in.close();
       in = null;
@@ -165,7 +167,7 @@ public class LoadFile extends Thread
           throw new DBException("Save does not contain " + fileName);
         }
         in = saveEntry.getInputStream();
-        questDatabase = new Database();
+        questDatabase = new Database(this.environment);
         questDatabase.load(in);
         in.close();
         in = null;
@@ -194,7 +196,7 @@ public class LoadFile extends Thread
       out.close();
       out = null;
 
-      Database playerDatabase = new Database(this.session.getPlayerFile());
+      Database playerDatabase = new Database(this.environment, this.session.getPlayerFile());
       playerDatabase.load();
 
       this.progressDialog.updateProgress(100);

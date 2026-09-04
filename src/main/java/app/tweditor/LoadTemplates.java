@@ -11,21 +11,23 @@ import javax.swing.SwingUtilities;
 
 public class LoadTemplates extends Thread
 {
-  private ProgressDialog progressDialog;
+  private final ProgressDialog progressDialog;
+  private final AppEnvironment environment;
   private boolean success = false;
 
-  public LoadTemplates(ProgressDialog dialog)
+  public LoadTemplates(ProgressDialog dialog, AppEnvironment environment)
   {
     this.progressDialog = dialog;
+    this.environment = environment;
   }
 
   public void run()
   {
     try
     {
-      Set mapSet = Main.resourceFiles.entrySet();
+      Set mapSet = this.environment.getResourceFiles().entrySet();
       int entryCount = mapSet.size();
-      Main.itemTemplates = new ArrayList(entryCount);
+      this.environment.setItemTemplates(new ArrayList(entryCount));
       int processedCount = 0;
       int currentProgress = 0;
 
@@ -54,7 +56,7 @@ public class LoadTemplates extends Thread
         }
 
         if (in != null) {
-          Database database = new Database();
+          Database database = new Database(this.environment);
           database.load(in);
           in.close();
           DBList fieldList = (DBList)database.getTopLevelStruct().getValue();
@@ -64,7 +66,7 @@ public class LoadTemplates extends Thread
             DBElement resourceElement = new DBElement(11, 0, "TemplateResRef", resourceName);
             fieldList.setElement("TemplateResRef", resourceElement);
             ItemTemplate itemTemplate = new ItemTemplate(fieldList);
-            Main.itemTemplates.add(itemTemplate);
+            this.environment.getItemTemplates().add(itemTemplate);
           }
         }
 

@@ -11,11 +11,13 @@ public class StreamReader extends Thread
   private StringWriter writer;
   private StringBuffer buffer;
   private int index = 0;
+  private final String lineSeparator;
 
-  public StreamReader(InputStream inputStream)
+  public StreamReader(InputStream inputStream, String lineSeparator)
   {
     this.reader = new InputStreamReader(inputStream);
     this.writer = new StringWriter(1024);
+    this.lineSeparator = lineSeparator;
   }
 
   public void run()
@@ -51,13 +53,13 @@ public class StreamReader extends Thread
     String line = null;
     int length = this.buffer.length();
     if (this.index < length) {
-      int sep = this.buffer.indexOf(Main.lineSeparator, this.index);
+      int sep = this.buffer.indexOf(this.lineSeparator, this.index);
       if (sep < 0) {
         line = this.buffer.substring(this.index);
         this.index = length;
       } else {
         line = this.buffer.substring(this.index, sep);
-        this.index = (sep + Main.lineSeparator.length());
+        this.index = (sep + this.lineSeparator.length());
       }
     }
 

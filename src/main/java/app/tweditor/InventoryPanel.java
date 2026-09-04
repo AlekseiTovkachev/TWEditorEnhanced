@@ -59,10 +59,12 @@ public class InventoryPanel extends JPanel
   private boolean[][] slots;
 
   private final GameSession session;
+  private final AppEnvironment environment;
 
-  public InventoryPanel(GameSession session)
+  public InventoryPanel(GameSession session, AppEnvironment environment)
   {
     this.session = session;
+    this.environment = environment;
     this.slots = new boolean[6][14];
 
     this.rootNode = new DefaultMutableTreeNode("Items");
@@ -220,7 +222,7 @@ public class InventoryPanel extends JPanel
 
     }
 
-    ExamineDialog.showDialog(Main.mainWindow, label, description.toString());
+    ExamineDialog.showDialog(Main.mainWindow, this.environment, label, description.toString());
   }
 
   private void removeSelectedItem()
@@ -345,7 +347,7 @@ public class InventoryPanel extends JPanel
     DBElement element = list.getElement("ItemList");
     DBList itemList;
     if (element == null) {
-      itemList = new DBList(10);
+      itemList = new DBList(this.environment, 10);
       element = new DBElement(15, 0, "ItemList", itemList);
       list.addElement(element);
     } else {
@@ -369,7 +371,7 @@ public class InventoryPanel extends JPanel
     DBList itemList = null;
 
     if (this.ingredients == null) {
-      Object resource = Main.resourceFiles.get("alchemy_ingre.2da");
+      Object resource = this.environment.getResourceFiles().get("alchemy_ingre.2da");
       if (resource == null) {
         throw new IOException("alchemy_ingre.2da not found");
       }
@@ -406,7 +408,7 @@ public class InventoryPanel extends JPanel
     }
 
     if (!this.availDone) {
-      for (ItemTemplate itemTemplate : Main.itemTemplates) {
+      for (ItemTemplate itemTemplate : this.environment.getItemTemplates()) {
         int baseItem = itemTemplate.getBaseItem();
         for (int i = 0; i < categoryMappings.length; i++) {
           if (categoryMappings[i][0] == baseItem) {

@@ -3,15 +3,11 @@ package app.tweditor;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -20,19 +16,6 @@ import javax.swing.filechooser.FileSystemView;
 public class Main
 {
   public static JFrame mainWindow;
-  public static String fileSeparator;
-  public static String lineSeparator;
-  public static boolean useShellFolder = true;
-  public static String installPath;
-  public static String installDataPath;
-  public static String gamePath;
-  public static String tmpDir;
-  public static File propFile;
-  public static Properties properties;
-  public static StringsDatabase stringsDatabase;
-  public static int languageID;
-  public static Map<String, Object> resourceFiles;
-  public static List<ItemTemplate> itemTemplates;
 
   private static String deferredText;
   private static Throwable deferredException;
@@ -41,29 +24,29 @@ public class Main
   {
     try
     {
+      AppEnvironment environment = new AppEnvironment();
       String osName = System.getProperty("os.name").toLowerCase();
       boolean osMac = osName.startsWith("mac");
       boolean osLinux = osName.startsWith("linux");
       boolean osWin = osName.startsWith("windows");
-      fileSeparator = System.getProperty("file.separator");
-      lineSeparator = System.getProperty("line.separator");
-      tmpDir = System.getProperty("java.io.tmpdir");
+      environment.setFileSeparator(System.getProperty("file.separator"));
+      environment.setLineSeparator(System.getProperty("line.separator"));
+      String tmpDir = System.getProperty("java.io.tmpdir");
       if(osLinux) {
           tmpDir = tmpDir + "/";
       }
+      environment.setTmpDir(tmpDir);
 
       String option = System.getProperty("UseShellFolder");
       if ((option != null) && (option.equals("0"))) {
-        useShellFolder = false;
+        environment.setUseShellFolder(false);
       }
 
-      installPath = System.getProperty("TW.install.path");
+      String installPath = System.getProperty("TW.install.path");
       String languageString = System.getProperty("TW.language");
+      int languageID = -1;
       if (languageString != null)
         languageID = Integer.parseInt(languageString);
-      else {
-        languageID = -1;
-      }
       if ((installPath == null) || (languageID == -1)) {
         if (osMac) {
             installPath = "/Applications/The Witcher.app/Contents/Resources/drive_c/Program Files/The Witcher";
@@ -84,15 +67,15 @@ public class Main
         } else if (osWin) {
             String regString = "reg query \"HKLM\\Software\\CD Projekt Red\\The Witcher\" /reg:32";
             Process process = Runtime.getRuntime().exec(regString);
-            StreamReader streamReader = new StreamReader(process.getInputStream());
+            StreamReader streamReader = new StreamReader(process.getInputStream(), environment.getLineSeparator());
             streamReader.start();
             process.waitFor();
             streamReader.join();
 
-            Pattern p = Pattern.compile("\\s*(\\S*)\\s*(\\S*)\\s*(.*)");
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile("\\s*(\\S*)\\s*(\\S*)\\s*(.*)");
             String line;
             while ((line = streamReader.getLine()) != null) {
-                Matcher m = p.matcher(line);
+                java.util.regex.Matcher m = p.matcher(line);
                 if ((m.matches()) && (m.groupCount() == 3) && (m.group(2).equals("REG_SZ"))) {
                     String keyName = m.group(1);
                     if ((keyName.equals("InstallFolder")) && (installPath == null))
@@ -114,33 +97,37 @@ public class Main
 
       }
 
-      installDataPath = new StringBuilder().append(installPath).append(fileSeparator).append("Data").toString();
+      environment.setInstallPath(installPath);
+      environment.setLanguageID(languageID);
+      String installDataPath = new StringBuilder().append(installPath).append(environment.getFileSeparator()).append("Data").toString();
+      environment.setInstallDataPath(installDataPath);
       File dirFile = new File(installDataPath);
       if (!dirFile.exists()) {
         dirFile.mkdirs();
       }
 
-      gamePath = System.getProperty("TW.data.path");
+      String gamePath = System.getProperty("TW.data.path");
       if (gamePath == null) {
         File defaultDir = FileSystemView.getFileSystemView().getDefaultDirectory();
         String userSubPath = osMac ? "com.cdprojektred.TheWitcher/The Witcher" : "The Witcher";
-        gamePath = new StringBuilder().append(defaultDir).append(fileSeparator).append(userSubPath).toString();
+        gamePath = new StringBuilder().append(defaultDir).append(environment.getFileSeparator()).append(userSubPath).toString();
       }
+      environment.setGamePath(gamePath);
 
-      dirFile = new File(new StringBuilder().append(gamePath).append(fileSeparator).append("saves").toString());
+      dirFile = new File(new StringBuilder().append(gamePath).append(environment.getFileSeparator()).append("saves").toString());
       if (!dirFile.exists()) {
         dirFile.mkdirs();
       }
 
-      File stringsFile = new File(new StringBuilder().append(installDataPath).append(fileSeparator).append("dialog_").append(languageID).append(".tlk").toString());
+      File stringsFile = new File(new StringBuilder().append(installDataPath).append(environment.getFileSeparator()).append("dialog_").append(languageID).append(".tlk").toString());
       if (!stringsFile.exists()) {
         throw new IOException(new StringBuilder().append("Localized strings database ").append(stringsFile.getPath()).append(" does not exist").toString());
       }
-      stringsDatabase = new StringsDatabase(stringsFile);
+      environment.setStringsDatabase(new StringsDatabase(stringsFile));
 
-      KeyDatabase keyDatabase = new KeyDatabase(new StringBuilder().append(installDataPath).append(fileSeparator).append("main.key").toString());
+      KeyDatabase keyDatabase = new KeyDatabase(environment, new StringBuilder().append(installDataPath).append(environment.getFileSeparator()).append("main.key").toString());
       List keyEntries = keyDatabase.getEntries();
-      resourceFiles = new HashMap(keyEntries.size());
+      HashMap<String, Object> resourceFiles = new HashMap(keyEntries.size());
       for (Object keyEntryObj : keyEntries) {
         KeyEntry keyEntry = (KeyEntry)keyEntryObj;
         String name = keyEntry.getFileName().toLowerCase();
@@ -154,21 +141,24 @@ public class Main
         }
 
       }
+      environment.setResourceFiles(resourceFiles);
 
-      processOverrides(new File(installDataPath));
+      processOverrides(environment, new File(installDataPath));
 
-      dirFile = new File(new StringBuilder().append(System.getProperty("user.home")).append(fileSeparator).append("Application Data").append(fileSeparator).append("ScripterRon").toString());
+      dirFile = new File(new StringBuilder().append(System.getProperty("user.home")).append(environment.getFileSeparator()).append("Application Data").append(environment.getFileSeparator()).append("ScripterRon").toString());
 
       if (!dirFile.exists()) {
         dirFile.mkdirs();
       }
-      propFile = new File(new StringBuilder().append(dirFile.getPath()).append(fileSeparator).append("TWEditor.properties").toString());
-      properties = new Properties();
+      File propFile = new File(new StringBuilder().append(dirFile.getPath()).append(environment.getFileSeparator()).append("TWEditor.properties").toString());
+      environment.setPropFile(propFile);
+      Properties properties = new Properties();
       if (propFile.exists()) {
         FileInputStream in = new FileInputStream(propFile);
         properties.load(in);
         in.close();
       }
+      environment.setProperties(properties);
 
       properties.setProperty("app.version", BuildInfo.VERSION);
       properties.setProperty("java.version", System.getProperty("java.version"));
@@ -184,7 +174,7 @@ public class Main
       ThemeSelection.install();
       SwingUtilities.invokeLater(new Runnable() {
         public void run() {
-          Main.createAndShowGUI();
+          Main.createAndShowGUI(environment);
         } } );
     }
     catch (Throwable exc) {
@@ -192,36 +182,36 @@ public class Main
     }
   }
 
-  private static void processOverrides(File dirFile)
+  private static void processOverrides(AppEnvironment environment, File dirFile)
   {
     File[] files = dirFile.listFiles();
     for (File file : files)
       if (file.isDirectory()) {
-        processOverrides(file);
+        processOverrides(environment, file);
       } else {
         String name = file.getName().toLowerCase();
         int sep = name.lastIndexOf('.');
         if (sep > 0) {
           String ext = name.substring(sep);
           if ((ext.equals(".2da")) || (ext.equals(".uti")))
-            resourceFiles.put(name, file);
+            environment.getResourceFiles().put(name, file);
         }
       }
   }
 
-  public static void createAndShowGUI()
+  public static void createAndShowGUI(AppEnvironment environment)
   {
     try
     {
       JFrame.setDefaultLookAndFeelDecorated(true);
 
-      mainWindow = new MainWindow();
+      mainWindow = new MainWindow(environment);
       mainWindow.pack();
       mainWindow.setVisible(true);
 
       SwingUtilities.invokeLater(new Runnable() {
         public void run() {
-          Main.buildTemplates();
+          Main.buildTemplates(environment);
         } } );
     }
     catch (Throwable exc) {
@@ -229,39 +219,12 @@ public class Main
     }
   }
 
-  public static void buildTemplates()
+  public static void buildTemplates(AppEnvironment environment)
   {
     ProgressDialog dialog = new ProgressDialog(mainWindow, "Loading item templates");
-    LoadTemplates task = new LoadTemplates(dialog);
+    LoadTemplates task = new LoadTemplates(dialog, environment);
     task.start();
     dialog.showDialog();
-  }
-
-  public static void saveProperties()
-  {
-    try
-    {
-      FileOutputStream out = new FileOutputStream(propFile);
-      properties.store(out, "TWEditor Properties");
-      out.close();
-    } catch (Throwable exc) {
-      logException("Exception while saving application properties", exc);
-    }
-  }
-
-  public static String getString(int stringRef)
-  {
-    return stringsDatabase.getString(stringRef);
-  }
-
-  public static String getLabel(int stringRef)
-  {
-    return stringsDatabase.getLabel(stringRef);
-  }
-
-  public static String getHeading(int stringRef)
-  {
-    return stringsDatabase.getHeading(stringRef);
   }
 
   public static void logException(String text, Throwable exc)
@@ -298,8 +261,6 @@ public class Main
         SwingUtilities.invokeAndWait(new Runnable() {
           public void run() {
             Main.logException(Main.deferredText, Main.deferredException);
-            //Main.access$102(null);
-            //Main.access$002(null);
           } } );
       }
       catch (Throwable swingException) {
@@ -329,4 +290,3 @@ public class Main
       System.out.println();
   }
 }
-

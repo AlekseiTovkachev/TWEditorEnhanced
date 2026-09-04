@@ -19,18 +19,18 @@ public class SaveEntry
   private int resourceLength;
   private List<byte[]> resourceDataList;
 
-  public SaveEntry(String path) {
-    this(path, null, 0, 0, false);
+  public SaveEntry(String path, String fileSeparator) {
+    this(path, null, 0, 0, false, fileSeparator);
   }
 
-  public SaveEntry(String path, File file, long offset, int length) {
-    this(path, file, offset, length, true);
+  public SaveEntry(String path, File file, long offset, int length, String fileSeparator) {
+    this(path, file, offset, length, true, fileSeparator);
   }
 
-  private SaveEntry(String path, File file, long offset, int length, boolean onDisk)
+  private SaveEntry(String path, File file, long offset, int length, boolean onDisk, String fileSeparator)
   {
     this.resourcePath = path;
-    int sep = this.resourcePath.lastIndexOf(Main.fileSeparator);
+    int sep = this.resourcePath.lastIndexOf(fileSeparator);
     if (sep >= 0)
       this.resourceName = this.resourcePath.substring(sep + 1).toLowerCase();
     else {

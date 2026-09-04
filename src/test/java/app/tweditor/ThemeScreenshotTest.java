@@ -37,12 +37,12 @@ class ThemeScreenshotTest {
   }
 
   private static void capture(ThemeSelection.Preference preference, Path target) throws Exception {
-    initStatics();
+    AppEnvironment environment = createEnvironment();
 
     SwingUtilities.invokeAndWait(() -> ThemeSelection.install(preference));
 
     MainWindow[] holder = new MainWindow[1];
-    SwingUtilities.invokeAndWait(() -> holder[0] = new MainWindow());
+    SwingUtilities.invokeAndWait(() -> holder[0] = new MainWindow(environment));
     MainWindow window = holder[0];
     SwingUtilities.invokeAndWait(() -> {
       window.setAlwaysOnTop(true);
@@ -52,7 +52,7 @@ class ThemeScreenshotTest {
       window.toFront();
     });
 
-    loadFixture(window);
+    loadFixture(environment, window);
 
     SwingUtilities.invokeAndWait(() -> {
       try {
@@ -86,20 +86,22 @@ class ThemeScreenshotTest {
     SwingUtilities.invokeAndWait(window::dispose);
   }
 
-  private static void initStatics() throws Exception {
-    Main.fileSeparator = System.getProperty("file.separator");
-    Main.lineSeparator = System.getProperty("line.separator");
-    Main.tmpDir = System.getProperty("java.io.tmpdir");
-    Main.properties = new Properties();
-    Main.languageID = 3;
-    Main.resourceFiles = new HashMap<>();
-    Main.itemTemplates = new ArrayList<>();
-    Main.stringsDatabase = new StringsDatabase(fakeTlk().getPath());
+  private static AppEnvironment createEnvironment() throws Exception {
+    AppEnvironment environment = new AppEnvironment();
+    environment.setFileSeparator(System.getProperty("file.separator"));
+    environment.setLineSeparator(System.getProperty("line.separator"));
+    environment.setTmpDir(System.getProperty("java.io.tmpdir"));
+    environment.setProperties(new Properties());
+    environment.setLanguageID(3);
+    environment.setResourceFiles(new HashMap<>());
+    environment.setItemTemplates(new ArrayList<>());
+    environment.setStringsDatabase(new StringsDatabase(fakeTlk().getPath()));
+    return environment;
   }
 
-  private static void loadFixture(MainWindow window) throws Exception {
+  private static void loadFixture(AppEnvironment environment, MainWindow window) throws Exception {
     File saveFile = SaveSeamSupport.copyFixtureTo(Files.createTempDirectory("theme-shots"));
-    LoadFile task = new LoadFile(new ProgressDialog(window, "Loading"), window.session, saveFile);
+    LoadFile task = new LoadFile(new ProgressDialog(window, "Loading"), window.session, environment, saveFile);
     task.run();
     assertNotNull(window.session.getSaveDatabase(), "fixture save failed to load");
   }

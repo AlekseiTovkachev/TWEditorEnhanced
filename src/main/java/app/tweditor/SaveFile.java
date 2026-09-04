@@ -7,12 +7,14 @@ public class SaveFile extends Thread
 {
   private final ProgressDialog progressDialog;
   private final GameSession session;
+  private final AppEnvironment environment;
   private boolean saveSuccessful = false;
 
-  public SaveFile(ProgressDialog dialog, GameSession session)
+  public SaveFile(ProgressDialog dialog, GameSession session, AppEnvironment environment)
   {
     this.progressDialog = dialog;
     this.session = session;
+    this.environment = environment;
   }
 
   public void run()
@@ -46,7 +48,7 @@ public class SaveFile extends Thread
       this.session.getSaveDatabase().save();
       this.progressDialog.updateProgress(90);
 
-      SaveDatabase saveDatabase = new SaveDatabase(this.session.getSaveDatabase().getPath());
+      SaveDatabase saveDatabase = new SaveDatabase(this.environment, this.session.getSaveDatabase().getPath());
       saveDatabase.load();
       this.session.setSaveDatabase(saveDatabase);
 

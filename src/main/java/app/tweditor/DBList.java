@@ -10,9 +10,11 @@ public class DBList extends DBElementValue
 {
   private List<DBElement> elementList;
   private Map<String, DBElement> labelMap;
+  private final AppEnvironment environment;
 
-  public DBList(int capacity)
+  public DBList(AppEnvironment environment, int capacity)
   {
+    this.environment = environment;
     this.elementList = new ArrayList(capacity);
     this.labelMap = new HashMap(capacity);
   }
@@ -153,7 +155,7 @@ public class DBList extends DBElementValue
           if (fieldType == 12) {
             LocalizedString string = (LocalizedString)element.getValue();
             if (string.getSubstringCount() > 0) {
-              LocalizedSubstring substring = string.getSubstring(Main.languageID, 0);
+              LocalizedSubstring substring = string.getSubstring(this.environment.getLanguageID(), 0);
               if (substring != null)
                 value = substring.getString();
               else
@@ -161,7 +163,7 @@ public class DBList extends DBElementValue
             } else {
               int refid = string.getStringReference();
               if (refid >= 0)
-                value = Main.getString(refid);
+                value = this.environment.getString(refid);
               else
                 value = new String();
             }
@@ -187,7 +189,7 @@ public class DBList extends DBElementValue
         element.setValue(value);
       } else if (fieldType == 12) {
         LocalizedString string = (LocalizedString)element.getValue();
-        LocalizedSubstring substring = new LocalizedSubstring(value, Main.languageID, 0);
+        LocalizedSubstring substring = new LocalizedSubstring(value, this.environment.getLanguageID(), 0);
         string.addSubstring(substring);
       } else {
         throw new DBException("Field " + label + " is not a string");

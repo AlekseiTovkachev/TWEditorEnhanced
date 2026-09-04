@@ -17,18 +17,20 @@ public class SaveDatabase
 {
   private final File file;
   private final String saveName;
+  private final AppEnvironment environment;
   private String savePrefix = "";
   private int dataOffset;
   private final List<SaveEntry> entries = new ArrayList<>(160);
   private final Map<String, SaveEntry> entryMap = new HashMap<>(160);
 
-  public SaveDatabase(String filename)
+  public SaveDatabase(AppEnvironment environment, String filename)
   {
-    this(new File(filename));
+    this(environment, new File(filename));
   }
 
-  public SaveDatabase(File file)
+  public SaveDatabase(AppEnvironment environment, File file)
   {
+    this.environment = environment;
     this.file = file;
 
     String saveName = file.getName();
@@ -86,7 +88,7 @@ public class SaveDatabase
         }
         length = getInteger(buffer, 0);
         int offset = getInteger(buffer, 4);
-        SaveEntry saveEntry = new SaveEntry(name, this.file, offset, length);
+        SaveEntry saveEntry = new SaveEntry(name, this.file, offset, length, this.environment.getFileSeparator());
         this.entries.add(saveEntry);
         this.entryMap.put(saveEntry.getResourceName(), saveEntry);
       }
@@ -234,7 +236,7 @@ public class SaveDatabase
   }
 
   public void addEntry(String pathName, File file) throws IOException {
-    SaveEntry saveEntry = new SaveEntry(this.savePrefix + pathName);
+    SaveEntry saveEntry = new SaveEntry(this.savePrefix + pathName, this.environment.getFileSeparator());
     saveEntry.readFromFile(file);
     addEntry(saveEntry);
   }
