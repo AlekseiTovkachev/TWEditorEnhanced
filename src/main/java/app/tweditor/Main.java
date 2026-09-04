@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 import javax.swing.filechooser.FileSystemView;
 
 public class Main
@@ -203,7 +202,7 @@ public class Main
       properties.setProperty("game.path", gamePath);
       properties.setProperty("temp.path", tmpDir);
 
-      UIManager.setLookAndFeel(ThemeSelection.lookAndFeelForOs());
+      ThemeSelection.install();
       SwingUtilities.invokeLater(new Runnable() {
         public void run() {
           Main.createAndShowGUI();

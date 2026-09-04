@@ -39,13 +39,7 @@ class ThemeScreenshotTest {
   private static void capture(ThemeSelection.Preference preference, Path target) throws Exception {
     initStatics();
 
-    SwingUtilities.invokeAndWait(() -> {
-      try {
-        UIManager.setLookAndFeel(ThemeSelection.lookAndFeel(preference));
-      } catch (Exception exc) {
-        throw new RuntimeException(exc);
-      }
-    });
+    SwingUtilities.invokeAndWait(() -> ThemeSelection.install(preference));
 
     MainWindow[] holder = new MainWindow[1];
     SwingUtilities.invokeAndWait(() -> holder[0] = new MainWindow());

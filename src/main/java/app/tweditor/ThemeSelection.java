@@ -1,12 +1,16 @@
 package app.tweditor;
 
 import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import javax.swing.LookAndFeel;
+import javax.swing.UIManager;
 
 /**
  * Decides which FlatLaf theme to use from the OS light/dark preference.
@@ -15,11 +19,36 @@ import javax.swing.LookAndFeel;
  */
 final class ThemeSelection {
 
+  /**
+   * The single accent color applied across tabs, fields, highlights, and
+   * progress indicators; FlatLaf derives all component variants from it in
+   * both light and dark themes.
+   */
+  static final String ACCENT_COLOR = "#B45309";
+
   enum Preference {
     LIGHT, DARK, UNKNOWN
   }
 
   private ThemeSelection() {
+  }
+
+  static Map<String, String> globalExtraDefaults() {
+    return Collections.singletonMap("@accentColor", ACCENT_COLOR);
+  }
+
+  /** Installs the FlatLaf theme that follows the OS light/dark preference. */
+  static void install() {
+    install(detectOsPreference());
+  }
+
+  static void install(Preference preference) {
+    FlatLaf.setGlobalExtraDefaults(globalExtraDefaults());
+    try {
+      UIManager.setLookAndFeel(lookAndFeel(preference));
+    } catch (Exception exc) {
+      throw new RuntimeException("Unable to install the FlatLaf look-and-feel", exc);
+    }
   }
 
   static LookAndFeel lookAndFeel(Preference preference) {

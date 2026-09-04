@@ -1,11 +1,14 @@
 package app.tweditor;
 
 import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
+import javax.swing.UIManager;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ThemeSelectionTest {
 
@@ -73,5 +76,20 @@ class ThemeSelectionTest {
   void gsettingsMissingOutputIsUnknown() {
     assertEquals(ThemeSelection.Preference.UNKNOWN, ThemeSelection.fromGsettingsOutput(null));
     assertEquals(ThemeSelection.Preference.UNKNOWN, ThemeSelection.fromGsettingsOutput("'something-else'"));
+  }
+
+  @Test
+  void globalDefaultsCarryTheAccentColor() {
+    assertEquals("#B45309", ThemeSelection.globalExtraDefaults().get("@accentColor"));
+    assertEquals(1, ThemeSelection.globalExtraDefaults().size());
+  }
+
+  @Test
+  void installAppliesTheAccentAndAFollowOsTheme() {
+    ThemeSelection.install();
+    assertEquals("#B45309", FlatLaf.getGlobalExtraDefaults().get("@accentColor"));
+    String lafClass = UIManager.getLookAndFeel().getClass().getName();
+    assertTrue(lafClass.equals("com.formdev.flatlaf.FlatLightLaf")
+        || lafClass.equals("com.formdev.flatlaf.FlatDarkLaf"));
   }
 }
