@@ -20,6 +20,7 @@ import javax.swing.JTabbedPane
 class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Editor"), ActionListener {
     private var windowMinimized = false
     private var titleModified = false
+    private var restoreBackupItem = JMenuItem("Restore Backup")
 
     @JvmField
     val session = GameSession(File(environment.tmpDir))
@@ -88,6 +89,11 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         menuItem.actionCommand = "save"
         menuItem.addActionListener(this)
         menu.add(menuItem)
+
+        restoreBackupItem.actionCommand = "restore backup"
+        restoreBackupItem.addActionListener(this)
+        restoreBackupItem.isEnabled = false
+        menu.add(restoreBackupItem)
 
         menuItem = JMenuItem("Close")
         menuItem.actionCommand = "close"
@@ -189,11 +195,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             val action = ae!!.actionCommand
             if (action == "open") {
                 openFile()
-                if (session.saveDatabase != null) {
-                    setTitle("The Witcher Save Editor - " + session.saveDatabase!!.getName())
-                } else {
-                    setTitle(null)
-                }
+                setOpenSaveTitle()
             } else if (action == "about") {
                 aboutProgram()
             } else if (action == "exit") {
@@ -203,6 +205,8 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             } else if (action == "save") {
                 saveFile()
                 setTitle(null)
+            } else if (action == "restore backup") {
+                restoreBackup()
             } else if (action == "close") {
                 closeFile()
                 setTitle(null)
@@ -259,6 +263,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         val success = dialog.showDialog()
 
         if (success) {
+            restoreBackupItem.isEnabled = session.hasSaveBackup()
             try {
                 session.setDataChanging(true)
 
@@ -320,6 +325,26 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         return saved
     }
 
+    private fun restoreBackup() {
+        val file = session.saveDatabase!!.getFile()
+        val option = JOptionPane.showConfirmDialog(this, "The current save will be replaced with the backup made before its first write in this session.  Unsaved changes will be lost.  Do you want to continue?", "Restore Backup", 0)
+        if (option != 0) {
+            return
+        }
+
+        session.restoreSaveBackup()
+        loadSave(file)
+        setOpenSaveTitle()
+    }
+
+    private fun setOpenSaveTitle() {
+        if (session.saveDatabase != null) {
+            setTitle("The Witcher Save Editor - " + session.saveDatabase!!.getName())
+        } else {
+            setTitle(null)
+        }
+    }
+
     private fun closeFile(): Boolean {
         if (session.saveDatabase == null) {
             return true
@@ -337,6 +362,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         }
 
         session.close()
+        restoreBackupItem.isEnabled = false
         tabbedPane.isVisible = false
         return true
     }

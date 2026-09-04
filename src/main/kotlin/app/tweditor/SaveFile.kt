@@ -36,7 +36,7 @@ class SaveFile(
             session.saveDatabase!!.addEntry(session.getSmmName()!!, session.smmFile)
             progressDialog.updateProgress(80)
 
-            session.saveDatabase!!.save()
+            session.writeSave()
             progressDialog.updateProgress(90)
 
             val saveDatabase = SaveDatabase(environment, session.saveDatabase!!.getPath())

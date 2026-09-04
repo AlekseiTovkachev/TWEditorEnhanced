@@ -30,7 +30,11 @@ object SaveSeamSupport {
     }
 
     fun load(environment: AppEnvironment, saveFile: File, workDir: Path): Loaded {
-        val loaded = Loaded(workDir, environment)
+        return loadInto(environment, saveFile, workDir, GameSession(workDir.toFile()))
+    }
+
+    fun loadInto(environment: AppEnvironment, saveFile: File, workDir: Path, session: GameSession): Loaded {
+        val loaded = Loaded(workDir, environment, session)
         val saveDatabase = SaveDatabase(environment, saveFile)
         saveDatabase.load()
         loaded.saveDatabase = saveDatabase
@@ -143,7 +147,7 @@ object SaveSeamSupport {
         saveDatabaseOld.addEntry("player.utc", loaded.playerFile!!)
         smmDatabase.save()
         saveDatabaseOld.addEntry(loaded.smmName!!, loaded.smmFile!!)
-        saveDatabaseOld.save()
+        loaded.session.writeSave()
 
         val saveDatabase = SaveDatabase(loaded.environment, saveDatabaseOld.getPath())
         saveDatabase.load()
@@ -190,8 +194,7 @@ object SaveSeamSupport {
         }
     }
 
-    class Loaded(workDir: Path, val environment: AppEnvironment) {
-        val session = GameSession(workDir.toFile())
+    class Loaded(workDir: Path, val environment: AppEnvironment, val session: GameSession = GameSession(workDir.toFile())) {
         var saveDatabase: SaveDatabase? = null
         var smmDatabase: Database? = null
         var modDatabase: ResourceDatabase? = null

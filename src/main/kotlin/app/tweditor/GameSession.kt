@@ -20,6 +20,7 @@ class GameSession(tmpDir: File) {
     private var quests: MutableList<Quest>? = null
     private var dataModified = false
     private var dataChanging = false
+    private var saveBackedUp = false
 
     fun getSmmName(): String? = smmName
     fun setSmmName(smmName: String?) {
@@ -51,10 +52,33 @@ class GameSession(tmpDir: File) {
         this.dataChanging = dataChanging
     }
 
+    fun writeSave() {
+        val saveDatabase = requireNotNull(this.saveDatabase) { "No save file is open" }
+        if (!saveBackedUp) {
+            saveBackup().createBackup()
+            this.saveBackedUp = true
+        }
+        saveDatabase.save()
+    }
+
+    fun hasSaveBackup(): Boolean {
+        return saveDatabase != null && saveBackup().hasBackup()
+    }
+
+    fun restoreSaveBackup() {
+        saveBackup().restoreBackup()
+    }
+
+    private fun saveBackup(): SaveBackup {
+        val saveDatabase = requireNotNull(this.saveDatabase) { "No save file is open" }
+        return SaveBackup(saveDatabase.getFile())
+    }
+
     fun close() {
         this.database = null
         this.modDatabase = null
         this.saveDatabase = null
         this.dataModified = false
+        this.saveBackedUp = false
     }
 }

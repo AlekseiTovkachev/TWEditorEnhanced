@@ -29,7 +29,7 @@ class PackFile(
                 }
             }
 
-            session.saveDatabase!!.save()
+            session.writeSave()
 
             this.saveSuccessful = true
         } catch (exc: IOException) {
