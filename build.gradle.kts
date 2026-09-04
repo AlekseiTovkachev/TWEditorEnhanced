@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
 }
 
-version = "4.0.0-SNAPSHOT"
+version = "4.1.0-SNAPSHOT"
 
 application {
     mainClass = "app.tweditor.Main"
@@ -40,6 +40,7 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    systemProperty("tweditor.screenshots", System.getProperty("tweditor.screenshots"))
     testLogging {
         events("passed", "skipped", "failed")
     }

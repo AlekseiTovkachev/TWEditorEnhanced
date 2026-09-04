@@ -23,15 +23,15 @@ public class MainWindow extends JFrame
   private boolean windowMinimized = false;
 
   private boolean titleModified = false;
-  private JTabbedPane tabbedPane;
-  private StatsPanel statsPanel;
-  private AttributesPanel attributesPanel;
-  private SignsPanel signsPanel;
-  private StylesPanel stylesPanel;
-  private EquipPanel equipPanel;
-  private InventoryPanel inventoryPanel;
-  private QuestsPanel questsPanel;
-  private DifficultyPanel difficultyPanel;
+  JTabbedPane tabbedPane;
+  StatsPanel statsPanel;
+  AttributesPanel attributesPanel;
+  SignsPanel signsPanel;
+  StylesPanel stylesPanel;
+  EquipPanel equipPanel;
+  InventoryPanel inventoryPanel;
+  QuestsPanel questsPanel;
+  DifficultyPanel difficultyPanel;
 
   public MainWindow()
   {
