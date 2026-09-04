@@ -263,7 +263,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         val success = dialog.showDialog()
 
         if (success) {
-            restoreBackupItem.isEnabled = session.hasSaveBackup()
+            updateRestoreBackupItem()
             try {
                 session.setDataChanging(true)
 
@@ -315,6 +315,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             val task = SaveFile(dialog, session, environment)
             task.start()
             saved = dialog.showDialog()
+            updateRestoreBackupItem()
             if (saved) {
                 session.setDataModified(false)
             }
@@ -345,6 +346,10 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         }
     }
 
+    private fun updateRestoreBackupItem() {
+        restoreBackupItem.isEnabled = session.hasSaveBackup()
+    }
+
     private fun closeFile(): Boolean {
         if (session.saveDatabase == null) {
             return true
@@ -362,7 +367,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         }
 
         session.close()
-        restoreBackupItem.isEnabled = false
+        updateRestoreBackupItem()
         tabbedPane.isVisible = false
         return true
     }
