@@ -84,6 +84,14 @@ object SaveSeamSupport {
         }
         val questDBList = questDatabase.getTopLevelStruct()!!.getValue() as DBList
         loaded.questCount = (questDBList.getElement("Quests")!!.getValue() as DBList).getElementCount()
+        loaded.session.setJournalData(JournalData(questDBList))
+        val sessionQuests = ArrayList<Quest>()
+        for (quest in questRecords(loaded).values) {
+            if (quest.questName.isNotEmpty()) {
+                sessionQuests.add(quest)
+            }
+        }
+        loaded.session.setQuests(sessionQuests)
 
         val playerFile = workDir.resolve("work-" + saveName.substring(0, 6) + ".utc").toFile()
         loaded.playerFile = playerFile

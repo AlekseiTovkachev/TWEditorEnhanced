@@ -3,7 +3,7 @@ package app.tweditor
 class ItemTemplate(val fieldList: DBList) : Comparable<ItemTemplate> {
     val baseItem: Int
     val itemName: String
-    private val resourceName: String
+    val resourceName: String
 
     init {
         this.baseItem = fieldList.getInteger("BaseItem")

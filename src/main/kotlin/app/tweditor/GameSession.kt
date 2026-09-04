@@ -14,6 +14,8 @@ class GameSession(tmpDir: File) {
     var playerDatabase: Database? = null
     var smmDatabase: Database? = null
 
+    private var journalData: JournalData? = null
+
     private var smmName: String? = null
     private var modName: String? = null
     private var playerName: String? = null
@@ -52,6 +54,11 @@ class GameSession(tmpDir: File) {
         this.dataChanging = dataChanging
     }
 
+    fun getJournalData(): JournalData? = journalData
+    fun setJournalData(journalData: JournalData?) {
+        this.journalData = journalData
+    }
+
     fun writeSave() {
         val saveDatabase = requireNotNull(this.saveDatabase) { "No save file is open" }
         if (!saveBackedUp) {
@@ -78,6 +85,7 @@ class GameSession(tmpDir: File) {
         this.database = null
         this.modDatabase = null
         this.saveDatabase = null
+        this.journalData = null
         this.dataModified = false
         this.saveBackedUp = false
     }

@@ -50,6 +50,9 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
     val questsPanel = QuestsPanel(session, environment)
 
     @JvmField
+    val knowledgePanel = KnowledgePanel(session, environment)
+
+    @JvmField
     val difficultyPanel = DifficultyPanel(session, environment)
 
     init {
@@ -168,6 +171,10 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         tabbedPane.addTab("Quests", panel)
 
         panel = JPanel()
+        panel.add(knowledgePanel)
+        tabbedPane.addTab("Knowledge", panel)
+
+        panel = JPanel()
         panel.add(difficultyPanel)
         tabbedPane.addTab("Difficulty", panel)
 
@@ -278,8 +285,8 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
                 equipPanel.setFields(list)
                 inventoryPanel.setFields(list)
                 questsPanel.setFields(list)
+                knowledgePanel.setFields(list)
                 difficultyPanel.setFields(list)
-
                 tabbedPane.selectedIndex = 0
                 tabbedPane.isVisible = true
 
@@ -309,6 +316,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             equipPanel.getFields(list)
             inventoryPanel.getFields(list)
             questsPanel.getFields(list)
+            knowledgePanel.getFields(list)
             difficultyPanel.getFields(list)
 
             val dialog = ProgressDialog(this, "Saving " + session.saveDatabase!!.getName())
