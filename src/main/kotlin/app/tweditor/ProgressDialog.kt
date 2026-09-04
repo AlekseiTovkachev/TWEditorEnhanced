@@ -10,7 +10,7 @@ import javax.swing.JPanel
 import javax.swing.JProgressBar
 import javax.swing.SwingUtilities
 
-class ProgressDialog(private val parent: JFrame, message: String) : JDialog(parent as Frame, "The Witcher Save Editor", true) {
+class ProgressDialog(private val parent: JFrame?, message: String) : JDialog(parent as Frame, "The Witcher Save Editor", true) {
     private val progressBar = JProgressBar(0, 100)
     private var deferredProgress = 0
     private var success = false

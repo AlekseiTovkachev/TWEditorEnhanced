@@ -235,7 +235,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             chooser = JFileChooser(environment.gamePath + environment.fileSeparator + "saves")
         }
 
-        chooser.putClientProperty("FileChooser.useShellFolder", java.lang.Boolean.valueOf(environment.isUseShellFolder))
+        chooser.putClientProperty("FileChooser.useShellFolder", java.lang.Boolean.valueOf(environment.useShellFolder))
         chooser.dialogTitle = "Select Save File"
         if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
             return
@@ -355,7 +355,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             chooser = JFileChooser()
         }
 
-        chooser.putClientProperty("FileChooser.useShellFolder", java.lang.Boolean.valueOf(environment.isUseShellFolder))
+        chooser.putClientProperty("FileChooser.useShellFolder", java.lang.Boolean.valueOf(environment.useShellFolder))
         chooser.dialogTitle = "Select Destination Directory"
         chooser.approveButtonText = "Select"
         chooser.fileSelectionMode = 1
@@ -398,7 +398,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             chooser = JFileChooser()
         }
 
-        chooser.putClientProperty("FileChooser.useShellFolder", java.lang.Boolean.valueOf(environment.isUseShellFolder))
+        chooser.putClientProperty("FileChooser.useShellFolder", java.lang.Boolean.valueOf(environment.useShellFolder))
         chooser.dialogTitle = "Select Source Directory"
         chooser.approveButtonText = "Select"
         chooser.fileSelectionMode = 1

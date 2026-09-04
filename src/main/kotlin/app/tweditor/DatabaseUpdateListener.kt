@@ -9,28 +9,28 @@ class DatabaseUpdateListener(private val session: GameSession) : ActionListener,
     override fun actionPerformed(ae: ActionEvent?) {
         if (session.database != null && !session.isDataChanging()) {
             session.setDataModified(true)
-            Main.mainWindow.setTitle(null)
+            Main.mainWindow!!.setTitle(null)
         }
     }
 
     override fun changedUpdate(de: DocumentEvent?) {
         if (session.database != null && !session.isDataChanging()) {
             session.setDataModified(true)
-            Main.mainWindow.setTitle(null)
+            Main.mainWindow!!.setTitle(null)
         }
     }
 
     override fun insertUpdate(de: DocumentEvent?) {
         if (session.database != null && !session.isDataChanging()) {
             session.setDataModified(true)
-            Main.mainWindow.setTitle(null)
+            Main.mainWindow!!.setTitle(null)
         }
     }
 
     override fun removeUpdate(de: DocumentEvent?) {
         if (session.database != null && !session.isDataChanging()) {
             session.setDataModified(true)
-            Main.mainWindow.setTitle(null)
+            Main.mainWindow!!.setTitle(null)
         }
     }
 }

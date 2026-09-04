@@ -47,7 +47,7 @@ class ExamineDialog(parent: JFrame?, environment: AppEnvironment, label: String,
             } else if (control.length >= 7 && control.substring(0, 7) == "strref:") {
                 strref = try {
                     val refid = control.substring(7).toInt()
-                    environment.stringsDatabase.getString(refid)
+                    environment.stringsDatabase!!.getString(refid)
                 } catch (exc: NumberFormatException) {
                     ""
                 }

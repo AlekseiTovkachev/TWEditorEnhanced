@@ -15,7 +15,7 @@ class LoadTemplates(private val progressDialog: ProgressDialog, private val envi
         try {
             val mapSet: Set<Map.Entry<String, Any>> = environment.resourceFiles.entries
             val entryCount = mapSet.size
-            environment.setItemTemplates(ArrayList(entryCount))
+            environment.itemTemplates = ArrayList<ItemTemplate>(entryCount)
             var processedCount = 0
             var currentProgress = 0
 

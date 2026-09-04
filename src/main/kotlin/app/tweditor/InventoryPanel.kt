@@ -205,7 +205,7 @@ class InventoryPanel(private val session: GameSession, private val environment: 
         }
 
         session.setDataModified(true)
-        Main.mainWindow.setTitle(null)
+        Main.mainWindow!!.setTitle(null)
     }
 
     @Throws(DBException::class, IOException::class)
@@ -305,7 +305,7 @@ class InventoryPanel(private val session: GameSession, private val environment: 
         insertItem(itemsModel, item)
 
         session.setDataModified(true)
-        Main.mainWindow.setTitle(null)
+        Main.mainWindow!!.setTitle(null)
     }
 
     @Throws(DBException::class, IOException::class)
@@ -329,7 +329,7 @@ class InventoryPanel(private val session: GameSession, private val environment: 
                 throw IOException("alchemy_ingre.2da not found")
             }
             val textDatabase = TextDatabase(input)
-            val count = textDatabase.resourceCount
+            val count = textDatabase.getResourceCount()
             ingredients = ArrayList(count)
             ingredientsMap = HashMap(count)
             for (i in 0 until count) {

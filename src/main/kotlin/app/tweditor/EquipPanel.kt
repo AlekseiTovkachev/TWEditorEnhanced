@@ -185,7 +185,7 @@ class EquipPanel(private val session: GameSession, private val environment: AppE
         }
 
         session.setDataModified(true)
-        Main.mainWindow.setTitle(null)
+        Main.mainWindow!!.setTitle(null)
     }
 
     @Throws(DBException::class, IOException::class)
@@ -253,7 +253,7 @@ class EquipPanel(private val session: GameSession, private val environment: AppE
         insertItem(itemsModel, item)
 
         session.setDataModified(true)
-        Main.mainWindow.setTitle(null)
+        Main.mainWindow!!.setTitle(null)
     }
 
     fun setFields(list: DBList) {
