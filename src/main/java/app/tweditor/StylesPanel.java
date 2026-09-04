@@ -36,7 +36,7 @@ public class StylesPanel extends JPanel
     int cols = fieldNames[0][0].length;
     this.fields = new JCheckBox[tabs][rows][cols];
     this.levels = new int[tabs];
-    this.labelMap = new HashMap(tabs * rows * cols);
+    this.labelMap = new HashMap<>(tabs * rows * cols);
     for (int tab = 0; tab < tabs; tab++) {
       JPanel panel = new JPanel(new GridLayout(0, cols, 5, 5));
       for (int row = 0; row < rows; row++) {
@@ -98,7 +98,7 @@ public class StylesPanel extends JPanel
         if (addAbility) {
           DBList fieldList = new DBList(this.environment, 2);
           fieldList.addElement(new DBElement(10, 0, "RnAbName", abilityLabel));
-          fieldList.addElement(new DBElement(0, 0, "RnAbStk", new Integer(0)));
+          fieldList.addElement(new DBElement(0, 0, "RnAbStk", 0));
           list.addElement(new DBElement(14, 48879, "", fieldList));
 
           if ((row == 0) && (col > this.levels[tab])) {

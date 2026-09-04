@@ -126,10 +126,9 @@ public class Main
       environment.setStringsDatabase(new StringsDatabase(stringsFile));
 
       KeyDatabase keyDatabase = new KeyDatabase(environment, new StringBuilder().append(installDataPath).append(environment.getFileSeparator()).append("main.key").toString());
-      List keyEntries = keyDatabase.getEntries();
+      List<KeyEntry> keyEntries = keyDatabase.getEntries();
       HashMap<String, Object> resourceFiles = new HashMap(keyEntries.size());
-      for (Object keyEntryObj : keyEntries) {
-        KeyEntry keyEntry = (KeyEntry)keyEntryObj;
+      for (KeyEntry keyEntry : keyEntries) {
         String name = keyEntry.getFileName().toLowerCase();
         int sep = name.lastIndexOf('.');
         if (sep > 0) {

@@ -144,7 +144,7 @@ public class QuestsPanel extends JPanel
           JOptionPane.showMessageDialog(this, "You must select a quest to examine", "No quest selected", 0);
         }
         else
-          examineQuest((Quest)this.notStartedList.get(sel));
+          examineQuest(this.notStartedList.get(sel));
       }
     }
     catch (DBException exc) {
@@ -163,7 +163,7 @@ public class QuestsPanel extends JPanel
     int currentPhase = fieldList.getInteger("CurrPhase");
     DBElement element = fieldList.getElement("Phases");
     if ((element == null) || (element.getType() != 15)) {
-      throw new DBException(new StringBuilder().append("No phase list found for quest ").append(quest.getResourceName()).toString());
+      throw new DBException("No phase list found for quest " + quest.getResourceName());
     }
     DBList phaseList = (DBList)element.getValue();
     currentPhase = Math.min(currentPhase, phaseList.getElementCount());
@@ -241,10 +241,10 @@ public class QuestsPanel extends JPanel
     throws DBException
   {
     int count = this.session.getQuests().size();
-    this.startedList = new ArrayList(count);
-    this.completedList = new ArrayList(count);
-    this.failedList = new ArrayList(count);
-    this.notStartedList = new ArrayList(count);
+    this.startedList = new ArrayList<>(count);
+    this.completedList = new ArrayList<>(count);
+    this.failedList = new ArrayList<>(count);
+    this.notStartedList = new ArrayList<>(count);
 
     for (Quest quest : this.session.getQuests()) {
       switch (quest.getQuestState()) {

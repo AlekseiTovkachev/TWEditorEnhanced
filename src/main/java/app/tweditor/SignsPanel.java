@@ -38,7 +38,7 @@ public class SignsPanel extends JPanel
     int cols = fieldNames[0][0].length;
     this.fields = new JCheckBox[tabs][rows][cols];
     this.signLevels = new int[tabs][2];
-    this.labelMap = new HashMap(tabs * rows * cols);
+    this.labelMap = new HashMap<>(tabs * rows * cols);
     for (int tab = 0; tab < tabs; tab++) {
       JPanel panel = new JPanel(new GridLayout(0, cols, 5, 5));
       for (int row = 0; row < rows; row++) {
@@ -107,7 +107,7 @@ public class SignsPanel extends JPanel
         if (addSign) {
           DBList fieldList = new DBList(this.environment, 2);
           fieldList.addElement(new DBElement(10, 0, "RnAbName", abilityLabel));
-          fieldList.addElement(new DBElement(0, 0, "RnAbStk", new Integer(0)));
+          fieldList.addElement(new DBElement(0, 0, "RnAbStk", 0));
           list.addElement(new DBElement(14, 48879, "", fieldList));
 
           if ((row < 2) && (col > this.signLevels[tab][row])) {
@@ -137,7 +137,7 @@ public class SignsPanel extends JPanel
               }
 
               fieldList = new DBList(this.environment, 1);
-              element = new DBElement(2, 0, "Spell", new Integer(low + 2 * col + row));
+              element = new DBElement(2, 0, "Spell", low + 2 * col + row);
               fieldList.addElement(element);
               list.addElement(new DBElement(14, 2, "", fieldList));
             }

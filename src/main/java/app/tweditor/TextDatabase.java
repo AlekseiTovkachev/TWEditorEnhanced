@@ -20,38 +20,37 @@ public class TextDatabase
   public TextDatabase(String filePath)
     throws DBException, IOException
   {
-    InputStreamReader reader = new FileReader(filePath);
-    readDefinitions(reader);
-    reader.close();
+    try (BufferedReader in = new BufferedReader(new FileReader(filePath))) {
+      readDefinitions(in);
+    }
   }
 
   public TextDatabase(File file)
     throws DBException, IOException
   {
-    InputStreamReader reader = new FileReader(file);
-    readDefinitions(reader);
-    reader.close();
+    try (BufferedReader in = new BufferedReader(new FileReader(file))) {
+      readDefinitions(in);
+    }
   }
 
   public TextDatabase(InputStream inputStream)
     throws DBException, IOException
   {
-    InputStreamReader reader = new InputStreamReader(inputStream);
-    readDefinitions(reader);
-    reader.close();
+    try (BufferedReader in = new BufferedReader(new InputStreamReader(inputStream))) {
+      readDefinitions(in);
+    }
   }
 
-  private void readDefinitions(InputStreamReader reader)
+  private void readDefinitions(BufferedReader in)
     throws DBException, IOException
   {
-    this.columns = new ArrayList(16);
-    this.columnMap = new HashMap(16);
-    this.resources = new ArrayList(100);
+    this.columns = new ArrayList<>(16);
+    this.columnMap = new HashMap<>(16);
+    this.resources = new ArrayList<>(100);
     boolean headerDone = false;
     boolean columnsDone = false;
 
     String[] values = null;
-    BufferedReader in = new BufferedReader(reader);
     String line;
     while ((line = in.readLine()) != null) {
       int lineLength = line.length();
@@ -83,16 +82,16 @@ public class TextDatabase
             if (start >= lineLength) {
               break;
             }
-            while ((index < lineLength) && 
-              (quoted ? 
-              line.charAt(index) != '"' : 
+            while ((index < lineLength) &&
+              (quoted ?
+              line.charAt(index) != '"' :
               !Character.isWhitespace(line.charAt(index))))
             {
               index++;
             }
             String token;
             if (start == index)
-              token = new String();
+              token = "";
             else {
               token = line.substring(start, index);
             }
@@ -104,12 +103,12 @@ public class TextDatabase
               if (value == 0) {
                 if (!token.equals("2DA"))
                   throw new DBException("File format '" + token + "' is not supported");
-              } else if ((value == 1) && 
+              } else if ((value == 1) &&
                 (!token.equals("V2.0")))
                 throw new DBException("File version '" + token + "' is not supported");
             }
             else if (!columnsDone) {
-              this.columnMap.put(token.toLowerCase(), new Integer(value));
+              this.columnMap.put(token.toLowerCase(), value);
               this.columns.add(token);
             } else if (skipIndex) {
               skipIndex = false;
@@ -135,8 +134,6 @@ public class TextDatabase
       }
 
     }
-
-    in.close();
   }
 
   public List<String> getColumnLabels()
@@ -157,7 +154,7 @@ public class TextDatabase
     if (valueIndex >= this.columns.size()) {
       throw new IllegalArgumentException("Value index is not valid");
     }
-    return ((String[])this.resources.get(resourceIndex))[valueIndex];
+    return this.resources.get(resourceIndex)[valueIndex];
   }
 
   public String getString(int resourceIndex, String valueLabel)
@@ -165,11 +162,11 @@ public class TextDatabase
     if (resourceIndex >= this.resources.size()) {
       throw new IllegalArgumentException("Resource index is not valid");
     }
-    Integer valueIndex = (Integer)this.columnMap.get(valueLabel.toLowerCase());
+    Integer valueIndex = this.columnMap.get(valueLabel.toLowerCase());
     if (valueIndex == null) {
       return "";
     }
-    String string = ((String[])this.resources.get(resourceIndex))[valueIndex.intValue()];
+    String string = this.resources.get(resourceIndex)[valueIndex];
     if ((string.length() >= 4) && (string.substring(0, 4).equals("****"))) {
       string = "";
     }
@@ -181,12 +178,12 @@ public class TextDatabase
     if (resourceIndex >= this.resources.size()) {
       throw new IllegalArgumentException("Resource index is not valid");
     }
-    Integer valueIndex = (Integer)this.columnMap.get(valueLabel.toLowerCase());
+    Integer valueIndex = this.columnMap.get(valueLabel.toLowerCase());
     if (valueIndex == null) {
       return 0;
     }
 
-    String string = ((String[])this.resources.get(resourceIndex))[valueIndex.intValue()];
+    String string = this.resources.get(resourceIndex)[valueIndex];
     int value;
     if ((string.length() >= 4) && (string.substring(0, 4).equals("****")))
       value = 0;
@@ -196,4 +193,3 @@ public class TextDatabase
     return value;
   }
 }
-

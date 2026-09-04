@@ -47,8 +47,8 @@ public class InventoryPanel extends JPanel
   private static final int[][] categoryMappings = { { 20, 7 }, { 21, 8 }, { 22, 9 }, { 23, 7 }, { 30, 1 }, { 32, 4 }, { 33, 6 }, { 34, 11 }, { 37, 8 }, { 38, 7 }, { 40, 10 }, { 44, 3 }, { 45, 12 }, { 46, 5 }, { 47, 0 }, { 48, 2 } };
 
   private static final String[] substanceNames = { "Vitriol", "Rebis", "Aether", "Quebirth", "Hydragenum", "Vermilion", "Albedo", "Nigredo", "Rubedo" };
-  private DefaultListModel itemsModel;
-  private JList itemsField;
+  private DefaultListModel<InventoryItem> itemsModel;
+  private JList<InventoryItem> itemsField;
   private DefaultMutableTreeNode rootNode;
   private CategoryNode[] categoryNodes;
   private DefaultTreeModel availModel;
@@ -76,11 +76,15 @@ public class InventoryPanel extends JPanel
       this.rootNode.add(node);
     }
 
-    this.itemsModel = new DefaultListModel();
-    this.itemsField = new JList(this.itemsModel);
+    this.itemsModel = new DefaultListModel<>();
+    this.itemsField = new JList<>(this.itemsModel);
     this.itemsField.setSelectionMode(0);
     this.itemsField.setVisibleRowCount(20);
-    this.itemsField.setPrototypeCellValue("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm");
+    try {
+      this.itemsField.setPrototypeCellValue(new InventoryItem("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm", new DBElement(14, 0, "", new DBList(this.environment, 0))));
+    } catch (DBException exc) {
+      this.itemsField.setPrototypeCellValue(null);
+    }
     JScrollPane scrollPane = new JScrollPane(this.itemsField);
     Dimension preferredSize = scrollPane.getPreferredSize();
 
@@ -164,7 +168,7 @@ public class InventoryPanel extends JPanel
       return;
     }
 
-    InventoryItem item = (InventoryItem)this.itemsModel.getElementAt(sel);
+    InventoryItem item = this.itemsModel.getElementAt(sel);
 
     examineItem(item.getName(), (DBList)item.getElement().getValue());
   }
@@ -208,13 +212,12 @@ public class InventoryPanel extends JPanel
 
     int alchemyID = fieldList.getInteger("AlchIngredient");
     if (alchemyID > 0) {
-      AlchemyIngredient ingredient = (AlchemyIngredient)this.ingredientsMap.get(new Integer(alchemyID));
+      AlchemyIngredient ingredient = this.ingredientsMap.get(alchemyID);
       if (ingredient != null) {
         description.append("<br><ul>");
-        List substances = ingredient.getSubstances();
-        for (Object substance : substances) {
+        for (String substance : ingredient.getSubstances()) {
           description.append("<li>");
-          description.append((String)substance);
+          description.append(substance);
         }
 
         description.append("</ul>");
@@ -235,7 +238,7 @@ public class InventoryPanel extends JPanel
       return;
     }
 
-    InventoryItem item = (InventoryItem)this.itemsModel.getElementAt(sel);
+    InventoryItem item = this.itemsModel.getElementAt(sel);
     DBElement itemElement = item.getElement();
 
     this.itemsModel.removeElementAt(sel);
@@ -245,10 +248,9 @@ public class InventoryPanel extends JPanel
     list = (DBList)list.getElement("Mod_PlayerList").getValue();
     list = (DBList)list.getElement(0).getValue();
     DBList itemList = (DBList)list.getElement("ItemList").getValue();
-    int itemCount = itemList.getElementCount();
-    for (int i = 0; i < itemCount; i++) {
-      if (itemList.getElement(i) == itemElement) {
-        itemList.removeElement(i);
+    for (DBElement element : itemList) {
+      if (element == itemElement) {
+        itemList.removeElement(element);
         DBList fieldList = (DBList)itemElement.getValue();
         int x = fieldList.getInteger("Repos_PosX");
         int y = fieldList.getInteger("Repos_PosY");
@@ -387,20 +389,20 @@ public class InventoryPanel extends JPanel
       }
       TextDatabase textDatabase = new TextDatabase(in);
       int count = textDatabase.getResourceCount();
-      this.ingredients = new ArrayList(count);
-      this.ingredientsMap = new HashMap(count);
+      this.ingredients = new ArrayList<>(count);
+      this.ingredientsMap = new HashMap<>(count);
       for (int i = 0; i < count; i++) {
         String name = textDatabase.getString(i, "NameRef");
         if (name.length() > 0) {
-          List substances = new ArrayList(4);
-          for (int j = 0; j < substanceNames.length; j++) {
-            if (textDatabase.getInteger(i, substanceNames[j]) == 1) {
-              substances.add(substanceNames[j]);
+          List<String> substances = new ArrayList<>(4);
+          for (String substanceName : substanceNames) {
+            if (textDatabase.getInteger(i, substanceName) == 1) {
+              substances.add(substanceName);
             }
           }
           AlchemyIngredient ingredient = new AlchemyIngredient(i, substances);
           this.ingredients.add(ingredient);
-          this.ingredientsMap.put(new Integer(ingredient.getID()), ingredient);
+          this.ingredientsMap.put(ingredient.getID(), ingredient);
         }
 
       }
@@ -430,7 +432,7 @@ public class InventoryPanel extends JPanel
       itemCount = itemList.getElementCount();
     }
 
-    this.itemsModel = new DefaultListModel();
+    this.itemsModel = new DefaultListModel<>();
     if (itemCount != 0) {
       this.itemsModel.ensureCapacity(itemCount);
     }
@@ -442,8 +444,7 @@ public class InventoryPanel extends JPanel
 
     }
 
-    for (int i = 0; i < itemCount; i++) {
-      DBElement itemElement = itemList.getElement(i);
+    for (DBElement itemElement : itemList) {
       DBList itemFields = (DBList)itemElement.getValue();
       String itemName = itemFields.getString("LocalizedName");
       if (itemName.length() > 0) {
@@ -471,12 +472,12 @@ public class InventoryPanel extends JPanel
   {
   }
 
-  private boolean insertItem(DefaultListModel itemModel, InventoryItem item)
+  private boolean insertItem(DefaultListModel<InventoryItem> itemModel, InventoryItem item)
   {
     int listSize = itemModel.getSize();
     boolean inserted = false;
     for (int j = 0; j < listSize; j++) {
-      InventoryItem listItem = (InventoryItem)itemModel.getElementAt(j);
+      InventoryItem listItem = itemModel.getElementAt(j);
       int diff = item.compareTo(listItem);
       if (diff < 0) {
         itemModel.insertElementAt(item, j);

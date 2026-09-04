@@ -90,7 +90,7 @@ public class DifficultyPanel extends JPanel
             } else if(cmd.equals(MEDIUM)) {
               levelList.addElement(new DBElement(10, 0, "RnAbName", MEDIUM_DIFF));
             }
-            levelList.addElement(new DBElement(0, 0, "RnAbStk", new Integer(0)));
+            levelList.addElement(new DBElement(0, 0, "RnAbStk", 0));
 
             abilityList.insertElement(i + 1, new DBElement(14, 48879, "", levelList));
             break;

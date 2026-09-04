@@ -25,14 +25,13 @@ public class LoadTemplates extends Thread
   {
     try
     {
-      Set mapSet = this.environment.getResourceFiles().entrySet();
+      Set<Map.Entry<String, Object>> mapSet = this.environment.getResourceFiles().entrySet();
       int entryCount = mapSet.size();
-      this.environment.setItemTemplates(new ArrayList(entryCount));
+      this.environment.setItemTemplates(new ArrayList<>(entryCount));
       int processedCount = 0;
       int currentProgress = 0;
 
-      for (Object mapEntryObj : mapSet) {
-        Map.Entry mapEntry = (Map.Entry)mapEntryObj;
+      for (Map.Entry<String, Object> mapEntry : mapSet) {
         String resourceName = null;
         InputStream in = null;
         Object entryObject = mapEntry.getValue();

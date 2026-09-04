@@ -236,7 +236,7 @@ public class MainWindow extends JFrame
 
     chooser.putClientProperty("FileChooser.useShellFolder", Boolean.valueOf(environment.isUseShellFolder()));
     chooser.setDialogTitle("Select Save File");
-    if (chooser.showOpenDialog(this) != 0) {
+    if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
       return;
     }
     File file = chooser.getSelectedFile();
@@ -364,7 +364,7 @@ public class MainWindow extends JFrame
     chooser.setDialogTitle("Select Destination Directory");
     chooser.setApproveButtonText("Select");
     chooser.setFileSelectionMode(1);
-    if (chooser.showOpenDialog(this) != 0) {
+    if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
       return;
     }
     File dirFile = chooser.getSelectedFile();
@@ -407,7 +407,7 @@ public class MainWindow extends JFrame
     chooser.setDialogTitle("Select Source Directory");
     chooser.setApproveButtonText("Select");
     chooser.setFileSelectionMode(1);
-    if (chooser.showOpenDialog(this) != 0) {
+    if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
       return;
     }
     File dirFile = chooser.getSelectedFile();

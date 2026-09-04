@@ -6,7 +6,7 @@ public class NumericField extends JTextField
 {
   public NumericField()
   {
-    this(new String(), 5);
+    this("", 5);
   }
 
   public NumericField(String string)
@@ -16,7 +16,7 @@ public class NumericField extends JTextField
 
   public NumericField(int columns)
   {
-    this(new String(), columns);
+    this("", columns);
   }
 
   public NumericField(String string, int columns)

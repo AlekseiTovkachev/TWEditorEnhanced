@@ -29,8 +29,8 @@ public class EquipPanel extends JPanel
   private static final int TAB_STEEL_SWORD = 2;
   private static final int TAB_TROPHY = 3;
   private static final int[][] categoryMappings = { { 1, 2 }, { 2, 1 }, { 29, 0 }, { 39, 3 } };
-  private DefaultListModel itemsModel;
-  private JList itemsField;
+  private DefaultListModel<InventoryItem> itemsModel;
+  private JList<InventoryItem> itemsField;
   private DefaultMutableTreeNode rootNode;
   private CategoryNode[] categoryNodes;
   private DefaultTreeModel availModel;
@@ -52,11 +52,15 @@ public class EquipPanel extends JPanel
       this.rootNode.add(node);
     }
 
-    this.itemsModel = new DefaultListModel();
-    this.itemsField = new JList(this.itemsModel);
+    this.itemsModel = new DefaultListModel<>();
+    this.itemsField = new JList<>(this.itemsModel);
     this.itemsField.setSelectionMode(0);
     this.itemsField.setVisibleRowCount(20);
-    this.itemsField.setPrototypeCellValue("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm");
+    try {
+      this.itemsField.setPrototypeCellValue(new InventoryItem("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm", new DBElement(14, 0, "", new DBList(this.environment, 0))));
+    } catch (DBException exc) {
+      this.itemsField.setPrototypeCellValue(null);
+    }
     JScrollPane scrollPane = new JScrollPane(this.itemsField);
     Dimension preferredSize = scrollPane.getPreferredSize();
 
@@ -140,7 +144,7 @@ public class EquipPanel extends JPanel
       return;
     }
 
-    InventoryItem item = (InventoryItem)this.itemsModel.getElementAt(sel);
+    InventoryItem item = this.itemsModel.getElementAt(sel);
 
     examineItem(item.getName(), (DBList)item.getElement().getValue());
   }
@@ -195,7 +199,7 @@ public class EquipPanel extends JPanel
       return;
     }
 
-    InventoryItem item = (InventoryItem)this.itemsModel.getElementAt(sel);
+    InventoryItem item = this.itemsModel.getElementAt(sel);
     DBElement itemElement = item.getElement();
 
     this.itemsModel.removeElementAt(sel);
@@ -205,13 +209,11 @@ public class EquipPanel extends JPanel
     list = (DBList)list.getElement("Mod_PlayerList").getValue();
     list = (DBList)list.getElement(0).getValue();
     DBList itemList = (DBList)list.getElement("Equip_ItemList").getValue();
-    int itemCount = itemList.getElementCount();
-    for (int i = 0; i < itemCount; i++) {
-      if (itemList.getElement(i) == itemElement) {
-        itemList.removeElement(i);
+    for (DBElement element : itemList) {
+      if (element == itemElement) {
+        itemList.removeElement(element);
         break;
       }
-
     }
 
     this.session.setDataModified(true);
@@ -248,9 +250,8 @@ public class EquipPanel extends JPanel
     if (element != null) {
       int swordCount = 0;
       DBList itemList = (DBList)element.getValue();
-      int itemCount = itemList.getElementCount();
-      for (int i = 0; i < itemCount; i++) {
-        DBList itemFields = (DBList)itemList.getElement(i).getValue();
+      for (DBElement itemElement : itemList) {
+        DBList itemFields = (DBList)itemElement.getValue();
         if (itemFields.getInteger("WeaponSlot") == weaponSlot) {
           if (weaponSlot == 1) {
             swordCount++;
@@ -323,13 +324,12 @@ public class EquipPanel extends JPanel
       itemCount = itemList.getElementCount();
     }
 
-    this.itemsModel = new DefaultListModel();
+    this.itemsModel = new DefaultListModel<>();
     if (itemCount != 0) {
       this.itemsModel.ensureCapacity(itemCount);
     }
 
-    for (int i = 0; i < itemCount; i++) {
-      DBElement itemElement = itemList.getElement(i);
+    for (DBElement itemElement : itemList) {
       DBList itemFields = (DBList)itemElement.getValue();
       String itemName = itemFields.getString("LocalizedName");
       if ((itemName.length() > 0) && (itemFields.getInteger("BaseItem") != 36)) {
@@ -350,12 +350,12 @@ public class EquipPanel extends JPanel
   {
   }
 
-  private boolean insertItem(DefaultListModel itemModel, InventoryItem item)
+  private boolean insertItem(DefaultListModel<InventoryItem> itemModel, InventoryItem item)
   {
     int listSize = itemModel.getSize();
     boolean inserted = false;
     for (int j = 0; j < listSize; j++) {
-      InventoryItem listItem = (InventoryItem)itemModel.getElementAt(j);
+      InventoryItem listItem = itemModel.getElementAt(j);
       int diff = item.compareTo(listItem);
       if (diff < 0) {
         itemModel.insertElementAt(item, j);

@@ -171,13 +171,13 @@ public class DBList extends DBElementValue
               if (refid >= 0)
                 value = this.environment.getString(refid);
               else
-                value = new String();
+                value = "";
             }
           } else {
             throw new DBException("Field " + label + " is not a string");
           }
         }
-      } } else { value = new String(); }
+      } } else { value = ""; }
 
 
     return value;

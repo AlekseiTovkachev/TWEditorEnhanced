@@ -63,7 +63,7 @@ public class ExamineDialog extends JDialog
         stringBuilder.replace(start + 1, stop, html);
         start = stringBuilder.indexOf("</c>", stop);
         if (start < 0) {
-          stringBuilder.append(new StringBuilder().append("</").append(html).append(">").toString());
+            stringBuilder.append("</").append(html).append(">");
           break;
         }
 
