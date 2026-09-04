@@ -4,19 +4,21 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.ServerSocket;
 import java.util.ArrayList;
+import java.util.List;
 import javax.swing.SwingUtilities;
 
 public class LoadFile extends Thread
 {
-  private ProgressDialog progressDialog;
+  private final ProgressDialog progressDialog;
+  private final GameSession session;
   private File file;
   private boolean loadSuccessful = false;
 
-  public LoadFile(ProgressDialog dialog, File file)
+  public LoadFile(ProgressDialog dialog, GameSession session, File file)
   {
     this.progressDialog = dialog;
+    this.session = session;
     this.file = file;
   }
 
@@ -30,23 +32,23 @@ public class LoadFile extends Thread
       saveDatabase.load();
       this.progressDialog.updateProgress(25);
       String saveName = saveDatabase.getName();
-      Main.savePrefix = saveName + Main.fileSeparator;
+      saveDatabase.setSavePrefix(saveName + Main.fileSeparator);
 
       int sep = saveName.indexOf(' ');
       if ((sep != 6) || (!Character.isDigit(saveName.charAt(0)))) {
         throw new DBException("Save name is not formatted correctly");
       }
-      Main.smmName = "save_" + saveName.substring(0, 6) + ".smm";
-      SaveEntry saveEntry = saveDatabase.getEntry(Main.smmName);
+      this.session.setSmmName("save_" + saveName.substring(0, 6) + ".smm");
+      SaveEntry saveEntry = saveDatabase.getEntry(this.session.getSmmName());
       if (saveEntry == null) {
-        throw new DBException("Save does not contain " + Main.smmName);
+        throw new DBException("Save does not contain " + this.session.getSmmName());
       }
       in = saveEntry.getInputStream();
-      if (Main.smmFile.exists()) {
-        Main.smmFile.delete();
+      if (this.session.getSmmFile().exists()) {
+        this.session.getSmmFile().delete();
       }
       byte[] buffer = new byte[4096];
-      out = new FileOutputStream(Main.smmFile);
+      out = new FileOutputStream(this.session.getSmmFile());
       int count;
       while ((count = in.read(buffer)) > 0) {
         out.write(buffer, 0, count);
@@ -55,7 +57,7 @@ public class LoadFile extends Thread
       in = null;
       out.close();
       out = null;
-      Database smmDatabase = new Database(Main.smmFile);
+      Database smmDatabase = new Database(this.session.getSmmFile());
       smmDatabase.load();
       this.progressDialog.updateProgress(35);
 
@@ -78,18 +80,18 @@ public class LoadFile extends Thread
         throw new DBException("No quest database name found in SMM database");
       }
 
-      Main.modName = startingMod + ".sav";
-      saveEntry = saveDatabase.getEntry(Main.modName);
+      this.session.setModName(startingMod + ".sav");
+      saveEntry = saveDatabase.getEntry(this.session.getModName());
       if (saveEntry == null) {
-        throw new DBException("Save does not contain " + Main.modName);
+        throw new DBException("Save does not contain " + this.session.getModName());
       }
       in = saveEntry.getInputStream();
-      if (Main.modFile.exists()) {
-        Main.modFile.delete();
+      if (this.session.getModFile().exists()) {
+        this.session.getModFile().delete();
       }
 
       buffer = new byte[4096];
-      out = new FileOutputStream(Main.modFile);
+      out = new FileOutputStream(this.session.getModFile());
       while ((count = in.read(buffer)) > 0) {
         out.write(buffer, 0, count);
       }
@@ -99,7 +101,7 @@ public class LoadFile extends Thread
       out = null;
       this.progressDialog.updateProgress(50);
 
-      ResourceDatabase modDatabase = new ResourceDatabase(Main.modFile);
+      ResourceDatabase modDatabase = new ResourceDatabase(this.session.getModFile());
       modDatabase.load();
       this.progressDialog.updateProgress(60);
 
@@ -108,10 +110,10 @@ public class LoadFile extends Thread
         throw new DBException("Save does not contain module.ifo");
       }
       in = resourceEntry.getInputStream();
-      if (Main.databaseFile.exists()) {
-        Main.databaseFile.delete();
+      if (this.session.getDatabaseFile().exists()) {
+        this.session.getDatabaseFile().delete();
       }
-      out = new FileOutputStream(Main.databaseFile);
+      out = new FileOutputStream(this.session.getDatabaseFile());
       while ((count = in.read(buffer)) > 0) {
         out.write(buffer, 0, count);
       }
@@ -121,7 +123,7 @@ public class LoadFile extends Thread
       out = null;
       this.progressDialog.updateProgress(75);
 
-      Database database = new Database(Main.databaseFile);
+      Database database = new Database(this.session.getDatabaseFile());
       database.load();
       list = (DBList)database.getTopLevelStruct().getValue();
       element = list.getElement("Mod_PlayerList");
@@ -153,7 +155,7 @@ public class LoadFile extends Thread
       this.progressDialog.updateProgress(85);
 
       count = questList.getElementCount();
-      Main.quests = new ArrayList(count);
+      List<Quest> quests = new ArrayList<>(count);
       for (int i = 0; i < count; i++) {
         fieldList = (DBList)questList.getElement(i).getValue();
         String resourceName = fieldList.getString("File");
@@ -169,20 +171,21 @@ public class LoadFile extends Thread
         in = null;
         Quest quest = new Quest(resourceName, questDatabase.getTopLevelStruct());
         if (quest.getQuestName().length() > 0) {
-          Main.quests.add(quest);
+          quests.add(quest);
         }
       }
+      this.session.setQuests(quests);
 
-      Main.playerName = "player.utc";
-      saveEntry = saveDatabase.getEntry(Main.playerName);
+      this.session.setPlayerName("player.utc");
+      saveEntry = saveDatabase.getEntry(this.session.getPlayerName());
       if (saveEntry == null) {
-        throw new DBException("Save does not contain " + Main.playerName);
+        throw new DBException("Save does not contain " + this.session.getPlayerName());
       }
       in = saveEntry.getInputStream();
-      if (Main.playerFile.exists()) {
-        Main.playerFile.delete();
+      if (this.session.getPlayerFile().exists()) {
+        this.session.getPlayerFile().delete();
       }
-      out = new FileOutputStream(Main.playerFile);
+      out = new FileOutputStream(this.session.getPlayerFile());
       while ((count = in.read(buffer)) > 0) {
         out.write(buffer, 0, count);
       }
@@ -191,16 +194,16 @@ public class LoadFile extends Thread
       out.close();
       out = null;
 
-      Database playerDatabase = new Database(Main.playerFile);
+      Database playerDatabase = new Database(this.session.getPlayerFile());
       playerDatabase.load();
 
       this.progressDialog.updateProgress(100);
 
-      Main.saveDatabase = saveDatabase; //.TheWitcherSave
-      Main.modDatabase = modDatabase; //.sav
-      Main.database = database; //.sav -> 'module.ifo'
-      Main.playerDatabase = playerDatabase; //player.utc
-      Main.smmDatabase = smmDatabase; //.smm
+      this.session.setSaveDatabase(saveDatabase); //.TheWitcherSave
+      this.session.setModDatabase(modDatabase); //.sav
+      this.session.setDatabase(database); //.sav -> 'module.ifo'
+      this.session.setPlayerDatabase(playerDatabase); //player.utc
+      this.session.setSmmDatabase(smmDatabase); //.smm
       this.loadSuccessful = true;
     } catch (DBException exc) {
       Main.logException("Save file structure is not valid", exc);
@@ -231,4 +234,3 @@ public class LoadFile extends Thread
     });
   }
 }
-

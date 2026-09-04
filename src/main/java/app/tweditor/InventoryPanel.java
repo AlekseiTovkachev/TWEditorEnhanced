@@ -58,8 +58,11 @@ public class InventoryPanel extends JPanel
   private Map<Integer, AlchemyIngredient> ingredientsMap;
   private boolean[][] slots;
 
-  public InventoryPanel()
+  private final GameSession session;
+
+  public InventoryPanel(GameSession session)
   {
+    this.session = session;
     this.slots = new boolean[6][14];
 
     this.rootNode = new DefaultMutableTreeNode("Items");
@@ -236,7 +239,7 @@ public class InventoryPanel extends JPanel
     this.itemsModel.removeElementAt(sel);
     this.itemsField.setSelectedIndex(-1);
 
-    DBList list = (DBList)Main.database.getTopLevelStruct().getValue();
+    DBList list = (DBList)this.session.getDatabase().getTopLevelStruct().getValue();
     list = (DBList)list.getElement("Mod_PlayerList").getValue();
     list = (DBList)list.getElement(0).getValue();
     DBList itemList = (DBList)list.getElement("ItemList").getValue();
@@ -255,7 +258,7 @@ public class InventoryPanel extends JPanel
 
     }
 
-    Main.dataModified = true;
+    this.session.setDataModified(true);
     Main.mainWindow.setTitle(null);
   }
 
@@ -335,7 +338,7 @@ public class InventoryPanel extends JPanel
       this.slots[y][x] = true;
     }
 
-    DBList list = (DBList)Main.database.getTopLevelStruct().getValue();
+    DBList list = (DBList)this.session.getDatabase().getTopLevelStruct().getValue();
     list = (DBList)list.getElement("Mod_PlayerList").getValue();
     list = (DBList)list.getElement(0).getValue();
 
@@ -355,7 +358,7 @@ public class InventoryPanel extends JPanel
     InventoryItem item = new InventoryItem(template.getItemName(), element);
     insertItem(this.itemsModel, item);
 
-    Main.dataModified = true;
+    this.session.setDataModified(true);
     Main.mainWindow.setTitle(null);
   }
 

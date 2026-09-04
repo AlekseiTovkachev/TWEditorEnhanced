@@ -10,12 +10,14 @@ import javax.swing.SwingUtilities;
 public class UnpackSave extends Thread
 {
   private ProgressDialog progressDialog;
+  private final GameSession session;
   private File dirFile;
   private boolean unpackSuccessful = false;
 
-  public UnpackSave(ProgressDialog dialog, File dirFile)
+  public UnpackSave(ProgressDialog dialog, GameSession session, File dirFile)
   {
     this.progressDialog = dialog;
+    this.session = session;
     this.dirFile = dirFile;
   }
 
@@ -25,7 +27,7 @@ public class UnpackSave extends Thread
     InputStream in = null;
     FileOutputStream out = null;
     try {
-      List entries = Main.saveDatabase.getEntries();
+      List entries = this.session.getSaveDatabase().getEntries();
       byte[] buffer = new byte[4096];
       int total = entries.size();
       int processed = 0;

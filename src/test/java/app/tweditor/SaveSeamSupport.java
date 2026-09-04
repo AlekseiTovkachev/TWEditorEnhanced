@@ -37,11 +37,11 @@ final class SaveSeamSupport {
   }
 
   static Loaded load(File saveFile, Path workDir) throws Exception {
-    Loaded loaded = new Loaded();
+    Loaded loaded = new Loaded(workDir);
     loaded.saveDatabase = new SaveDatabase(saveFile);
     loaded.saveDatabase.load();
     String saveName = loaded.saveDatabase.getName();
-    Main.savePrefix = saveName + Main.fileSeparator;
+    loaded.saveDatabase.setSavePrefix(saveName + Main.fileSeparator);
     loaded.smmName = "save_" + saveName.substring(0, 6) + ".smm";
 
     loaded.smmFile = workDir.resolve("work-" + saveName.substring(0, 6) + ".smm").toFile();
@@ -82,6 +82,14 @@ final class SaveSeamSupport {
     extract(loaded.saveDatabase.getEntry("player.utc"), loaded.playerFile);
     loaded.playerDatabase = new Database(loaded.playerFile);
     loaded.playerDatabase.load();
+
+    loaded.session.setSaveDatabase(loaded.saveDatabase);
+    loaded.session.setDatabase(loaded.ifoDatabase);
+    loaded.session.setModDatabase(loaded.modDatabase);
+    loaded.session.setPlayerDatabase(loaded.playerDatabase);
+    loaded.session.setSmmDatabase(loaded.smmDatabase);
+    loaded.session.setSmmName(loaded.smmName);
+    loaded.session.setModName(loaded.modName);
 
     return loaded;
   }
@@ -128,6 +136,7 @@ final class SaveSeamSupport {
     SaveDatabase saveDatabase = new SaveDatabase(loaded.saveDatabase.getPath());
     saveDatabase.load();
     loaded.saveDatabase = saveDatabase;
+    loaded.session.setSaveDatabase(saveDatabase);
   }
 
   static java.util.Set<String> changedEntries(Map<String, Long> before, Map<String, Long> after) {
@@ -168,6 +177,7 @@ final class SaveSeamSupport {
   }
 
   static final class Loaded {
+    final GameSession session;
     SaveDatabase saveDatabase;
     Database smmDatabase;
     ResourceDatabase modDatabase;
@@ -182,5 +192,9 @@ final class SaveSeamSupport {
     File modFile;
     File ifoFile;
     File playerFile;
+
+    Loaded(Path workDir) {
+      this.session = new GameSession(workDir.toFile());
+    }
   }
 }

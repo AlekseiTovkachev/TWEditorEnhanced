@@ -25,9 +25,11 @@ public class QuestsPanel extends JPanel
   private JList failedField;
   private List<Quest> notStartedList;
   private JList notStartedField;
+  private final GameSession session;
 
-  public QuestsPanel()
+  public QuestsPanel(GameSession session)
   {
+    this.session = session;
     this.tabbedPane = new JTabbedPane(2);
 
     this.startedField = new JList();
@@ -236,13 +238,13 @@ public class QuestsPanel extends JPanel
   public void setFields(DBList list)
     throws DBException
   {
-    int count = Main.quests.size();
+    int count = this.session.getQuests().size();
     this.startedList = new ArrayList(count);
     this.completedList = new ArrayList(count);
     this.failedList = new ArrayList(count);
     this.notStartedList = new ArrayList(count);
 
-    for (Quest quest : Main.quests) {
+    for (Quest quest : this.session.getQuests()) {
       switch (quest.getQuestState()) {
       case 1:
         insertItem(this.startedList, quest);

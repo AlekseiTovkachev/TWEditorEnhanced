@@ -33,23 +33,7 @@ public class Main
   public static int languageID;
   public static Map<String, Object> resourceFiles;
   public static List<ItemTemplate> itemTemplates;
-  public static SaveDatabase saveDatabase;
-  public static File databaseFile;
-  public static Database database;
-  public static String savePrefix;
-  public static String modName;
-  public static File modFile;
-  public static ResourceDatabase modDatabase;
-  public static List<Quest> quests;
-  public static String playerName;
-  public static File playerFile;
-  public static Database playerDatabase;
-  public static String smmName;
-  public static File smmFile;
-  public static Database smmDatabase;
-  public static boolean dataModified = false;
 
-  public static boolean dataChanging = false;
   private static String deferredText;
   private static Throwable deferredException;
 
@@ -67,11 +51,6 @@ public class Main
       if(osLinux) {
           tmpDir = tmpDir + "/";
       }
-
-      smmFile = new File(new StringBuilder().append(tmpDir).append("TWEditor.smm").toString());
-      databaseFile = new File(new StringBuilder().append(tmpDir).append("TWEditor.ifo").toString());
-      modFile = new File(new StringBuilder().append(tmpDir).append("TWEditor.mod").toString());
-      playerFile = new File(new StringBuilder().append(tmpDir).append("TWEditor.player").toString());
 
       String option = System.getProperty("UseShellFolder");
       if ((option != null) && (option.equals("0"))) {

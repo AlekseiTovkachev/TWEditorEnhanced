@@ -25,9 +25,11 @@ public class AttributesPanel extends JPanel
   private Map<String, JCheckBox> labelMap;
   private JCheckBox[][][] fields;
   private JTabbedPane tabbedPane;
+  private final GameSession session;
 
-  public AttributesPanel()
+  public AttributesPanel(GameSession session)
   {
+    this.session = session;
     this.tabbedPane = new JTabbedPane();
     int tabs = fieldNames.length;
     int rows = fieldNames[0].length;
@@ -60,7 +62,7 @@ public class AttributesPanel extends JPanel
 
   public void actionPerformed(ActionEvent ae)
   {
-    if ((!(ae.getSource() instanceof JCheckBox)) || (Main.dataChanging)) {
+    if ((!(ae.getSource() instanceof JCheckBox)) || (this.session.isDataChanging())) {
       return;
     }
 
@@ -73,7 +75,7 @@ public class AttributesPanel extends JPanel
       JCheckBox field = this.fields[tab][row][col];
       String abilityLabel = databaseLabels[tab][row][col];
 
-      DBList list = (DBList)Main.database.getTopLevelStruct().getValue();
+      DBList list = (DBList)this.session.getDatabase().getTopLevelStruct().getValue();
       list = (DBList)list.getElement("Mod_PlayerList").getValue();
       DBList playerList = (DBList)list.getElement(0).getValue();
       list = (DBList)playerList.getElement("CharAbilities").getValue();
@@ -113,11 +115,11 @@ public class AttributesPanel extends JPanel
           if ((row == 0) && (col > this.levels[tab])) {
             this.levels[tab] = col;
           }
-          Main.dataModified = true;
+          this.session.setDataModified(true);
         } else {
-          Main.dataChanging = true;
+          this.session.setDataChanging(true);
           field.setSelected(false);
-          Main.dataChanging = false;
+          this.session.setDataChanging(false);
         }
       }
       else
@@ -152,7 +154,7 @@ public class AttributesPanel extends JPanel
             String name = fieldList.getString("RnAbName");
             if (abilityLabel.equals(name)) {
               list.removeElement(i);
-              Main.dataModified = true;
+              this.session.setDataModified(true);
               break;
             }
           }
@@ -166,7 +168,7 @@ public class AttributesPanel extends JPanel
                 String name = fieldList.getString("RnAbName");
                 if (name.equals(associatedLabel)) {
                   list.removeElement(j);
-                  Main.dataModified = true;
+                  this.session.setDataModified(true);
                   break;
                 }
               }
@@ -178,9 +180,9 @@ public class AttributesPanel extends JPanel
           if ((row == 0) && (this.levels[tab] == col))
             this.levels[tab] = (col - 1);
         } else {
-          Main.dataChanging = true;
+          this.session.setDataChanging(true);
           field.setSelected(true);
-          Main.dataChanging = false;
+          this.session.setDataChanging(false);
         }
       }
     } catch (DBException exc) {

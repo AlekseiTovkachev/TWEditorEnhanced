@@ -52,12 +52,12 @@ class ThemeScreenshotTest {
       window.toFront();
     });
 
-    loadFixture();
+    loadFixture(window);
 
     SwingUtilities.invokeAndWait(() -> {
       try {
-        Main.dataChanging = true;
-        DBList list = (DBList) Main.database.getTopLevelStruct().getValue();
+        window.session.setDataChanging(true);
+        DBList list = (DBList) window.session.getDatabase().getTopLevelStruct().getValue();
         list = (DBList) list.getElement("Mod_PlayerList").getValue();
         list = (DBList) list.getElement(0).getValue();
 
@@ -70,8 +70,8 @@ class ThemeScreenshotTest {
 
         window.tabbedPane.setSelectedIndex(0);
         window.tabbedPane.setVisible(true);
-        Main.dataChanging = false;
-        Main.dataModified = false;
+        window.session.setDataChanging(false);
+        window.session.setDataModified(false);
       } catch (Exception exc) {
         throw new RuntimeException(exc);
       }
@@ -90,24 +90,18 @@ class ThemeScreenshotTest {
     Main.fileSeparator = System.getProperty("file.separator");
     Main.lineSeparator = System.getProperty("line.separator");
     Main.tmpDir = System.getProperty("java.io.tmpdir");
-    Main.smmFile = new File(Main.tmpDir, "TWEditor.smm");
-    Main.databaseFile = new File(Main.tmpDir, "TWEditor.ifo");
-    Main.modFile = new File(Main.tmpDir, "TWEditor.mod");
-    Main.playerFile = new File(Main.tmpDir, "TWEditor.player");
     Main.properties = new Properties();
     Main.languageID = 3;
     Main.resourceFiles = new HashMap<>();
     Main.itemTemplates = new ArrayList<>();
     Main.stringsDatabase = new StringsDatabase(fakeTlk().getPath());
-    Main.dataModified = false;
-    Main.dataChanging = false;
   }
 
-  private static void loadFixture() throws Exception {
+  private static void loadFixture(MainWindow window) throws Exception {
     File saveFile = SaveSeamSupport.copyFixtureTo(Files.createTempDirectory("theme-shots"));
-    LoadFile task = new LoadFile(new ProgressDialog(Main.mainWindow, "Loading"), saveFile);
+    LoadFile task = new LoadFile(new ProgressDialog(window, "Loading"), window.session, saveFile);
     task.run();
-    assertNotNull(Main.saveDatabase, "fixture save failed to load");
+    assertNotNull(window.session.getSaveDatabase(), "fixture save failed to load");
   }
 
   /**

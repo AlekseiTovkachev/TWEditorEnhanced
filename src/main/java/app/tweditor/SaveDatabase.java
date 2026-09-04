@@ -17,6 +17,7 @@ public class SaveDatabase
 {
   private final File file;
   private final String saveName;
+  private String savePrefix = "";
   private int dataOffset;
   private final List<SaveEntry> entries = new ArrayList<>(160);
   private final Map<String, SaveEntry> entryMap = new HashMap<>(160);
@@ -202,6 +203,11 @@ public class SaveDatabase
     return this.saveName;
   }
 
+  public void setSavePrefix(String savePrefix)
+  {
+    this.savePrefix = savePrefix;
+  }
+
   public File getFile()
   {
     return this.file;
@@ -228,7 +234,7 @@ public class SaveDatabase
   }
 
   public void addEntry(String pathName, File file) throws IOException {
-    SaveEntry saveEntry = new SaveEntry(Main.savePrefix + pathName);
+    SaveEntry saveEntry = new SaveEntry(this.savePrefix + pathName);
     saveEntry.readFromFile(file);
     addEntry(saveEntry);
   }

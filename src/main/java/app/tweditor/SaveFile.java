@@ -6,47 +6,49 @@ import java.io.IOException;
 public class SaveFile extends Thread
 {
   private final ProgressDialog progressDialog;
+  private final GameSession session;
   private boolean saveSuccessful = false;
 
-  public SaveFile(ProgressDialog dialog)
+  public SaveFile(ProgressDialog dialog, GameSession session)
   {
     this.progressDialog = dialog;
+    this.session = session;
   }
 
   public void run()
   {
     try
     {
-      Main.database.save();
+      this.session.getDatabase().save();
       this.progressDialog.updateProgress(15);
 
-      ResourceEntry resourceEntry = new ResourceEntry("module.ifo", Main.databaseFile);
-      Main.modDatabase.addEntry(resourceEntry);
-      Main.modDatabase.save();
+      ResourceEntry resourceEntry = new ResourceEntry("module.ifo", this.session.getDatabaseFile());
+      this.session.getModDatabase().addEntry(resourceEntry);
+      this.session.getModDatabase().save();
       this.progressDialog.updateProgress(30);
 
-      ResourceDatabase modDatabase = new ResourceDatabase(Main.modDatabase.getPath());
+      ResourceDatabase modDatabase = new ResourceDatabase(this.session.getModDatabase().getPath());
       modDatabase.load();
-      Main.modDatabase = modDatabase;
+      this.session.setModDatabase(modDatabase);
       this.progressDialog.updateProgress(45);
 
-      Main.saveDatabase.addEntry(Main.modName, Main.modFile);
+      this.session.getSaveDatabase().addEntry(this.session.getModName(), this.session.getModFile());
       this.progressDialog.updateProgress(60);
 
-      Main.playerDatabase.save();
-      Main.saveDatabase.addEntry(Main.playerName, Main.playerFile);
+      this.session.getPlayerDatabase().save();
+      this.session.getSaveDatabase().addEntry(this.session.getPlayerName(), this.session.getPlayerFile());
       this.progressDialog.updateProgress(70);
 
-      Main.smmDatabase.save();
-      Main.saveDatabase.addEntry(Main.smmName, Main.smmFile);
+      this.session.getSmmDatabase().save();
+      this.session.getSaveDatabase().addEntry(this.session.getSmmName(), this.session.getSmmFile());
       this.progressDialog.updateProgress(80);
 
-      Main.saveDatabase.save();
+      this.session.getSaveDatabase().save();
       this.progressDialog.updateProgress(90);
 
-      SaveDatabase saveDatabase = new SaveDatabase(Main.saveDatabase.getPath());
+      SaveDatabase saveDatabase = new SaveDatabase(this.session.getSaveDatabase().getPath());
       saveDatabase.load();
-      Main.saveDatabase = saveDatabase;
+      this.session.setSaveDatabase(saveDatabase);
 
       this.progressDialog.updateProgress(100);
 
@@ -63,4 +65,3 @@ public class SaveFile extends Thread
             SaveFile.this.progressDialog.closeDialog(SaveFile.this.saveSuccessful));
   }
 }
-

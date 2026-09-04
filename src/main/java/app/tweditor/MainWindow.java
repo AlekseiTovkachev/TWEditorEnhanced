@@ -23,6 +23,7 @@ public class MainWindow extends JFrame
   private boolean windowMinimized = false;
 
   private boolean titleModified = false;
+  final GameSession session = new GameSession(new File(Main.tmpDir));
   JTabbedPane tabbedPane;
   StatsPanel statsPanel;
   AttributesPanel attributesPanel;
@@ -119,42 +120,42 @@ public class MainWindow extends JFrame
     setContentPane(this.tabbedPane);
 
     JPanel panel = new JPanel();
-    this.statsPanel = new StatsPanel();
+    this.statsPanel = new StatsPanel(this.session);
     panel.add(this.statsPanel);
     this.tabbedPane.addTab("Stats", panel);
 
     panel = new JPanel();
-    this.attributesPanel = new AttributesPanel();
+    this.attributesPanel = new AttributesPanel(this.session);
     panel.add(this.attributesPanel);
     this.tabbedPane.addTab("Attributes", panel);
 
     panel = new JPanel();
-    this.signsPanel = new SignsPanel();
+    this.signsPanel = new SignsPanel(this.session);
     panel.add(this.signsPanel);
     this.tabbedPane.addTab("Signs", panel);
 
     panel = new JPanel();
-    this.stylesPanel = new StylesPanel();
+    this.stylesPanel = new StylesPanel(this.session);
     panel.add(this.stylesPanel);
     this.tabbedPane.addTab("Styles", panel);
 
     panel = new JPanel();
-    this.equipPanel = new EquipPanel();
+    this.equipPanel = new EquipPanel(this.session);
     panel.add(this.equipPanel);
     this.tabbedPane.addTab("Equipment", panel);
 
     panel = new JPanel();
-    this.inventoryPanel = new InventoryPanel();
+    this.inventoryPanel = new InventoryPanel(this.session);
     panel.add(this.inventoryPanel);
     this.tabbedPane.addTab("Inventory", panel);
 
     panel = new JPanel();
-    this.questsPanel = new QuestsPanel();
+    this.questsPanel = new QuestsPanel(this.session);
     panel.add(this.questsPanel);
     this.tabbedPane.addTab("Quests", panel);
 
     panel = new JPanel();
-    this.difficultyPanel = new DifficultyPanel();
+    this.difficultyPanel = new DifficultyPanel(this.session);
     panel.add(this.difficultyPanel);
     this.tabbedPane.addTab("Difficulty", panel);
 
@@ -166,14 +167,14 @@ public class MainWindow extends JFrame
     if (title != null) {
       super.setTitle(title);
       this.titleModified = false;
-    } else if (Main.saveDatabase == null) {
+    } else if (this.session.getSaveDatabase() == null) {
       super.setTitle("The Witcher Save Editor");
       this.titleModified = false;
-    } else if ((Main.dataModified) && (!this.titleModified)) {
-      super.setTitle("The Witcher Save Editor - " + Main.saveDatabase.getName() + "*");
+    } else if ((this.session.isDataModified()) && (!this.titleModified)) {
+      super.setTitle("The Witcher Save Editor - " + this.session.getSaveDatabase().getName() + "*");
       this.titleModified = true;
-    } else if ((!Main.dataModified) && (this.titleModified)) {
-      super.setTitle("The Witcher Save Editor - " + Main.saveDatabase.getName());
+    } else if ((!this.session.isDataModified()) && (this.titleModified)) {
+      super.setTitle("The Witcher Save Editor - " + this.session.getSaveDatabase().getName());
       this.titleModified = false;
     }
   }
@@ -185,15 +186,15 @@ public class MainWindow extends JFrame
       String action = ae.getActionCommand();
       if (action.equals("open")) {
         openFile();
-        if (Main.saveDatabase != null)
-          setTitle("The Witcher Save Editor - " + Main.saveDatabase.getName());
+        if (this.session.getSaveDatabase() != null)
+          setTitle("The Witcher Save Editor - " + this.session.getSaveDatabase().getName());
         else
           setTitle(null);
       } else if (action.equals("about")) {
         aboutProgram();
       } else if (action.equals("exit")) {
         exitProgram();
-      } else if (Main.saveDatabase == null) {
+      } else if (this.session.getSaveDatabase() == null) {
         JOptionPane.showMessageDialog(this, "No save file is open", "No Save", 0);
       } else if (action.equals("save")) {
         saveFile();
@@ -250,19 +251,19 @@ public class MainWindow extends JFrame
     }
 
     ProgressDialog dialog = new ProgressDialog(this, "Loading " + saveName);
-    LoadFile task = new LoadFile(dialog, file);
+    LoadFile task = new LoadFile(dialog, this.session, file);
     task.start();
     boolean success = dialog.showDialog();
 
     if (success)
       try {
-        Main.dataChanging = true;
+        this.session.setDataChanging(true);
 
-        DBList list = (DBList)Main.database.getTopLevelStruct().getValue();
+        DBList list = (DBList)this.session.getDatabase().getTopLevelStruct().getValue();
         list = (DBList)list.getElement("Mod_PlayerList").getValue();
         list = (DBList)list.getElement(0).getValue();
 
-        DBList playerList = (DBList)Main.playerDatabase.getTopLevelStruct().getValue();
+        DBList playerList = (DBList)this.session.getPlayerDatabase().getTopLevelStruct().getValue();
 
         this.statsPanel.setFields(list);
         this.attributesPanel.setFields(list);
@@ -276,8 +277,8 @@ public class MainWindow extends JFrame
         this.tabbedPane.setSelectedIndex(0);
         this.tabbedPane.setVisible(true);
 
-        Main.dataChanging = false;
-        Main.dataModified = false;
+        this.session.setDataChanging(false);
+        this.session.setDataModified(false);
       } catch (DBException exc) {
         Main.logException("Database format is not valid", exc);
       } catch (IOException exc) {
@@ -287,13 +288,13 @@ public class MainWindow extends JFrame
 
   private boolean saveFile()
   {
-    if (Main.saveDatabase == null) {
+    if (this.session.getSaveDatabase() == null) {
       return false;
     }
     boolean saved = false;
     try
     {
-      DBList list = (DBList)Main.database.getTopLevelStruct().getValue();
+      DBList list = (DBList)this.session.getDatabase().getTopLevelStruct().getValue();
       list = (DBList)list.getElement("Mod_PlayerList").getValue();
       list = (DBList)list.getElement(0).getValue();
       this.statsPanel.getFields(list);
@@ -305,12 +306,12 @@ public class MainWindow extends JFrame
       this.questsPanel.getFields(list);
       this.difficultyPanel.getFields(list);
 
-      ProgressDialog dialog = new ProgressDialog(this, "Saving " + Main.saveDatabase.getName());
-      SaveFile task = new SaveFile(dialog);
+      ProgressDialog dialog = new ProgressDialog(this, "Saving " + this.session.getSaveDatabase().getName());
+      SaveFile task = new SaveFile(dialog, this.session);
       task.start();
       saved = dialog.showDialog();
       if (saved)
-        Main.dataModified = false;
+        this.session.setDataModified(false);
     } catch (DBException exc) {
       Main.logException("Database format is not valid", exc);
     }
@@ -320,27 +321,24 @@ public class MainWindow extends JFrame
 
   private boolean closeFile()
   {
-    if (Main.saveDatabase == null) {
+    if (this.session.getSaveDatabase() == null) {
       return true;
     }
 
-    if (Main.dataModified) {
+    if (this.session.isDataModified()) {
       int option = JOptionPane.showConfirmDialog(this, "The current save has been modified.  Do you want to save the changes?", "Save Modified", 1);
 
       if (option == 2) {
         return false;
       }
-      if ((option == 0) && 
+      if ((option == 0) &&
         (!saveFile())) {
         return false;
       }
 
     }
 
-    Main.database = null;
-    Main.modDatabase = null;
-    Main.saveDatabase = null;
-    Main.dataModified = false;
+    this.session.close();
     this.tabbedPane.setVisible(false);
     return true;
   }
@@ -372,8 +370,8 @@ public class MainWindow extends JFrame
       dirFile.mkdirs();
     }
 
-    ProgressDialog dialog = new ProgressDialog(this, "Unpacking " + Main.saveDatabase.getName());
-    UnpackSave task = new UnpackSave(dialog, dirFile);
+    ProgressDialog dialog = new ProgressDialog(this, "Unpacking " + this.session.getSaveDatabase().getName());
+    UnpackSave task = new UnpackSave(dialog, this.session, dirFile);
     task.start();
     if (dialog.showDialog())
       JOptionPane.showMessageDialog(this, "Save game unpacked to " + dirFile.getPath(), "Save Unpacked", 1);
@@ -381,7 +379,7 @@ public class MainWindow extends JFrame
 
   private void packSave()
   {
-    if (Main.dataModified) {
+    if (this.session.isDataModified()) {
       int option = JOptionPane.showConfirmDialog(this, "The current save has been modified and these changes will be lost.  Do you want to continue?", "Save Modified", 0);
 
       if (option != 0) {
@@ -417,13 +415,13 @@ public class MainWindow extends JFrame
       return;
     }
 
-    Main.dataModified = false;
-    ProgressDialog dialog = new ProgressDialog(this, "Packing " + Main.saveDatabase.getName());
-    PackFile task = new PackFile(dialog, dirFile);
+    this.session.setDataModified(false);
+    ProgressDialog dialog = new ProgressDialog(this, "Packing " + this.session.getSaveDatabase().getName());
+    PackFile task = new PackFile(dialog, this.session, dirFile);
     task.start();
     boolean saved = dialog.showDialog();
 
-    File file = Main.saveDatabase.getFile();
+    File file = this.session.getSaveDatabase().getFile();
     closeFile();
     if (saved)
       loadSave(file);
@@ -433,11 +431,11 @@ public class MainWindow extends JFrame
   {
     closeFile();
 
-    if (Main.modFile.exists()) {
-      Main.modFile.delete();
+    if (this.session.getModFile().exists()) {
+      this.session.getModFile().delete();
     }
-    if (Main.databaseFile.exists()) {
-      Main.databaseFile.delete();
+    if (this.session.getDatabaseFile().exists()) {
+      this.session.getDatabaseFile().delete();
     }
 
     if (!this.windowMinimized) {

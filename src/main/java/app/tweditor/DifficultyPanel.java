@@ -21,9 +21,11 @@ public class DifficultyPanel extends JPanel
 
   private JRadioButton easyButton, mediumButton, hardButton;
   private String level;
+  private final GameSession session;
 
-  public DifficultyPanel()
+  public DifficultyPanel(GameSession session)
   {
+    this.session = session;
     easyButton = new JRadioButton(EASY);
     easyButton.setActionCommand(EASY);
     easyButton.addActionListener(this);
@@ -95,7 +97,7 @@ public class DifficultyPanel extends JPanel
       }
 
       level = cmd;
-      Main.dataModified = true;
+      this.session.setDataModified(true);
     } catch (DBException exc) {
       Main.logException("Unable to update database field", exc);
     } catch (Throwable exc) {
@@ -121,7 +123,7 @@ public class DifficultyPanel extends JPanel
 
   public void actionPerformed(ActionEvent ae)
   {
-    if ((!(ae.getSource() instanceof JRadioButton)) || (Main.dataChanging)) {
+    if ((!(ae.getSource() instanceof JRadioButton)) || (this.session.isDataChanging())) {
       return;
     }
 
@@ -131,15 +133,15 @@ public class DifficultyPanel extends JPanel
       return;
     }
 
-    DBList top = (DBList)Main.database.getTopLevelStruct().getValue();
+    DBList top = (DBList)this.session.getDatabase().getTopLevelStruct().getValue();
     DBList mod = (DBList)top.getElement("Mod_PlayerList").getValue();
     DBList modPlayerList = (DBList)mod.getElement(0).getValue();
     processCharAbilities(modPlayerList, cmd);
 
-    DBList playerList = (DBList)Main.playerDatabase.getTopLevelStruct().getValue();
+    DBList playerList = (DBList)this.session.getPlayerDatabase().getTopLevelStruct().getValue();
     processCharAbilities(playerList, cmd);
 
-    DBList smm = (DBList)Main.smmDatabase.getTopLevelStruct().getValue();
+    DBList smm = (DBList)this.session.getSmmDatabase().getTopLevelStruct().getValue();
     processGameDiffSetting(smm, cmd);
   }
 

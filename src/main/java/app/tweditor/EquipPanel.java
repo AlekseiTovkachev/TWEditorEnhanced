@@ -36,9 +36,11 @@ public class EquipPanel extends JPanel
   private DefaultTreeModel availModel;
   private JTree availField;
   private boolean availDone = false;
+  private final GameSession session;
 
-  public EquipPanel()
+  public EquipPanel(GameSession session)
   {
+    this.session = session;
     this.rootNode = new DefaultMutableTreeNode("Items");
 
     this.categoryNodes = new CategoryNode[categories.length];
@@ -197,7 +199,7 @@ public class EquipPanel extends JPanel
     this.itemsModel.removeElementAt(sel);
     this.itemsField.setSelectedIndex(-1);
 
-    DBList list = (DBList)Main.database.getTopLevelStruct().getValue();
+    DBList list = (DBList)this.session.getDatabase().getTopLevelStruct().getValue();
     list = (DBList)list.getElement("Mod_PlayerList").getValue();
     list = (DBList)list.getElement(0).getValue();
     DBList itemList = (DBList)list.getElement("Equip_ItemList").getValue();
@@ -210,7 +212,7 @@ public class EquipPanel extends JPanel
 
     }
 
-    Main.dataModified = true;
+    this.session.setDataModified(true);
     Main.mainWindow.setTitle(null);
   }
 
@@ -237,7 +239,7 @@ public class EquipPanel extends JPanel
     DBList templateList = template.getFieldList();
     int weaponSlot = templateList.getInteger("WeaponSlot");
 
-    DBList list = (DBList)Main.database.getTopLevelStruct().getValue();
+    DBList list = (DBList)this.session.getDatabase().getTopLevelStruct().getValue();
     list = (DBList)list.getElement("Mod_PlayerList").getValue();
     list = (DBList)list.getElement(0).getValue();
     DBElement element = list.getElement("Equip_ItemList");
@@ -286,7 +288,7 @@ public class EquipPanel extends JPanel
     InventoryItem item = new InventoryItem(template.getItemName(), element);
     insertItem(this.itemsModel, item);
 
-    Main.dataModified = true;
+    this.session.setDataModified(true);
     Main.mainWindow.setTitle(null);
   }
 

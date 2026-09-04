@@ -12,11 +12,13 @@ public class StatsPanel extends JPanel
 
   private static final String[][] databaseNames = { { "ExpLevel", "CurrentHitPoints", "TalentBronze" }, { "Experience", "CurrentEndurance", "TalentSilver" }, { "Gold", "CurrentToxicity", "TalentGold" } };
   private NumericField[][] statFields;
+  private final GameSession session;
 
-  public StatsPanel()
+  public StatsPanel(GameSession session)
   {
+    this.session = session;
     super(new GridLayout(0, 3, 40, 0));
-    DatabaseUpdateListener listener = new DatabaseUpdateListener();
+    DatabaseUpdateListener listener = new DatabaseUpdateListener(this.session);
     this.statFields = new NumericField[fieldNames.length][3];
 
     add(Box.createVerticalStrut(5));

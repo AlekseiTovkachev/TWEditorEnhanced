@@ -10,12 +10,14 @@ import javax.swing.SwingUtilities;
 public class PackFile extends Thread
 {
   private final ProgressDialog progressDialog;
+  private final GameSession session;
   private final File extractDirectory;
   private boolean saveSuccessful = false;
 
-  public PackFile(ProgressDialog dialog, File dirFile)
+  public PackFile(ProgressDialog dialog, GameSession session, File dirFile)
   {
     this.progressDialog = dialog;
+    this.session = session;
     this.extractDirectory = dirFile;
   }
 
@@ -23,7 +25,7 @@ public class PackFile extends Thread
   {
     FileInputStream in = null;
     OutputStream out = null;
-    List<SaveEntry> entries = Main.saveDatabase.getEntries();
+    List<SaveEntry> entries = this.session.getSaveDatabase().getEntries();
     try
     {
       for (SaveEntry entry : entries) {
@@ -40,7 +42,7 @@ public class PackFile extends Thread
 
       }
 
-      Main.saveDatabase.save();
+      this.session.getSaveDatabase().save();
 
       this.saveSuccessful = true;
     } catch (IOException exc) {
