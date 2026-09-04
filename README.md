@@ -25,6 +25,10 @@ The 'Difficulty' tab allows you to modify difficulty level.
 Installation
 ============
 
+The easiest way to run the editor is the self-contained Windows build: unzip `TWEditor-win-<version>.zip` (built with `gradlew packageWindowsAppImage`) and double-click `TWEditor.exe`.  No Java installation is required — a module-trimmed Java 25 runtime is bundled with the app.
+
+Alternatively, the cross-platform JAR build works on any platform as described below.
+
 This version of the save game editor assumes you have installed the Enhanced Edition of The Witcher.  Using this version of the editor with the original version of The Witcher can result in inventory errors.
 
 To install this utility, place the TWEditorEnhanced-4.0.0.jar file into a directory of your choice.  To run the utility, create a program shortcut and specify 
