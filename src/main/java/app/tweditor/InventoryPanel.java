@@ -80,11 +80,7 @@ public class InventoryPanel extends JPanel
     this.itemsField = new JList<>(this.itemsModel);
     this.itemsField.setSelectionMode(0);
     this.itemsField.setVisibleRowCount(20);
-    try {
-      this.itemsField.setPrototypeCellValue(new InventoryItem("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm", new DBElement(14, 0, "", new DBList(this.environment, 0))));
-    } catch (DBException exc) {
-      this.itemsField.setPrototypeCellValue(null);
-    }
+    this.itemsField.setPrototypeCellValue(new InventoryItem("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm", new DBElement(14, 0, "", new DBList(this.environment, 0))));
     JScrollPane scrollPane = new JScrollPane(this.itemsField);
     Dimension preferredSize = scrollPane.getPreferredSize();
 
