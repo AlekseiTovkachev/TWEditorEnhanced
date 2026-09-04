@@ -104,7 +104,7 @@ public class Main
 
             languageID = 3;
         } else if (osWin) {
-            String regString = "reg query \"HKLM\\Software\\CD Projekt Red\\The Witcher\"";
+            String regString = "reg query \"HKLM\\Software\\CD Projekt Red\\The Witcher\" /reg:32";
             Process process = Runtime.getRuntime().exec(regString);
             StreamReader streamReader = new StreamReader(process.getInputStream());
             streamReader.start();

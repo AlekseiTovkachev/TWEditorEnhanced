@@ -95,6 +95,7 @@ tasks.register<Exec>("jpackageAppImage") {
     group = "distribution"
     description = "Builds a self-contained Windows app-image via jpackage with the trimmed runtime and the app icon."
     dependsOn(jlinkRuntime)
+    inputs.files(tasks.jar)
     outputs.dir(appImageDir)
     val inputDir = jpackageInputDir.get().asFile
     val image = appImageDir.get().asFile
