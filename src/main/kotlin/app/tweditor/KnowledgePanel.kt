@@ -59,8 +59,8 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
         setJournalView(charactersField, "character")
         setJournalView(placesField, "place")
         setMonstersView()
-        setAlchemyView(recipesField, list, "AlchKnowledge", "AlchRecipName")
-        setAlchemyView(ingredientsField, list, "AlchIdent", "AlchSubstance")
+        setRecipesView(list)
+        setIngredientsView(list)
         setJournalView(glossaryField, "info", "unique")
         setJournalView(tutorialField, "tutorial")
     }
@@ -80,7 +80,7 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
 
         val labels = ArrayList<String>(entries.size)
         for (entry in entries) {
-            labels.add(entry.entryId + if (entry.isRead) "" else " (unread)")
+            labels.add(label(entry))
         }
         field.setListData(labels.toTypedArray())
         field.selectedIndex = -1
@@ -103,31 +103,65 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
             labels.add("(no monsters learned yet)")
         } else {
             for (entry in monsters) {
-                labels.add(entry.category + ":" + entry.entryId + if (entry.isRead) "" else " (unread)")
+                labels.add(label(entry))
             }
         }
         monstersField.setListData(labels.toTypedArray())
         monstersField.selectedIndex = -1
     }
 
-    private fun setAlchemyView(field: JList<Any>, list: DBList, elementName: String, fieldName: String) {
-        val lines = ArrayList<String>()
-        val element = list.getElement(elementName)
-        if (element != null && element.getType() == 15) {
-            val entries = element.getValue() as DBList
-            for (item in entries) {
-                val fields = item.getValue() as DBList
-                val resref = fields.getString(fieldName)
-                if (resref.isNotEmpty()) {
-                    lines.add(resolveItemName(resref))
-                }
+    private fun setRecipesView(list: DBList) {
+        val labels = ArrayList<String>()
+        appendAlchemySection(labels, list, "AlchKnowledge", "AlchRecipName")
+        if (labels.isEmpty()) {
+            labels.add("(no formulas known)")
+        }
+        recipesField.setListData(labels.toTypedArray())
+        recipesField.selectedIndex = -1
+    }
+
+    private fun setIngredientsView(list: DBList) {
+        val labels = ArrayList<String>()
+        appendAlchemySection(labels, list, "AlchIdent", "AlchSubstance")
+        val journalData = session.getJournalData()
+        if (journalData != null) {
+            val substances = ArrayList<JournalEntry>(journalData.entriesInCategory("hydragenum"))
+            for (substance in SUBSTANCE_CATEGORIES) {
+                substances.addAll(journalData.entriesInCategory(substance))
+            }
+            substances.sortBy { it.entryId }
+            for (substance in substances) {
+                labels.add(JournalEntryNames.displayName(substance.entryId) + unreadSuffix(substance))
             }
         }
-        if (lines.isEmpty()) {
-            lines.add("(none)")
+        if (labels.isEmpty()) {
+            labels.add("(no ingredients identified)")
         }
-        field.setListData(lines.toTypedArray())
-        field.selectedIndex = -1
+        ingredientsField.setListData(labels.toTypedArray())
+        ingredientsField.selectedIndex = -1
+    }
+
+    private fun appendAlchemySection(labels: MutableList<String>, list: DBList, elementName: String, fieldName: String) {
+        val element = list.getElement(elementName)
+        if (element == null || element.getType() != 15) {
+            return
+        }
+        val entries = element.getValue() as DBList
+        for (item in entries) {
+            val fields = item.getValue() as DBList
+            val resref = fields.getString(fieldName)
+            if (resref.isNotEmpty()) {
+                labels.add(resolveItemName(resref))
+            }
+        }
+    }
+
+    private fun label(entry: JournalEntry): String {
+        return JournalEntryNames.displayName(entry.entryId) + unreadSuffix(entry)
+    }
+
+    private fun unreadSuffix(entry: JournalEntry): String {
+        return if (entry.isRead) "" else " (unread)"
     }
 
     private fun resolveItemName(resref: String): String {
@@ -140,8 +174,9 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
     }
 
     companion object {
-        private val NON_MONSTER_CATEGORIES = setOf(
-            "recipe", "character", "place", "info", "tutorial", "unique", "hidden",
+        private val SUBSTANCE_CATEGORIES = setOf(
             "hydragenum", "vermilion", "rebis", "quebrith", "aether", "vitriol")
+        private val NON_MONSTER_CATEGORIES = SUBSTANCE_CATEGORIES + setOf(
+            "recipe", "character", "place", "info", "tutorial", "unique", "hidden")
     }
 }
