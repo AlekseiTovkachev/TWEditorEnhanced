@@ -166,6 +166,8 @@ class LoadFile(
             }
             session.setQuests(quests)
             session.setJournalData(JournalData(list))
+            session.setQuestDatabase(questDatabase)
+            session.setQuestDBName(questDBName)
 
             session.setPlayerName("player.utc")
             saveEntry = saveDatabase.getEntry(session.getPlayerName()!!)

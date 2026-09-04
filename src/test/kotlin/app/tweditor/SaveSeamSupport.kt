@@ -85,6 +85,8 @@ object SaveSeamSupport {
         val questDBList = questDatabase.getTopLevelStruct()!!.getValue() as DBList
         loaded.questCount = (questDBList.getElement("Quests")!!.getValue() as DBList).getElementCount()
         loaded.session.setJournalData(JournalData(questDBList))
+        loaded.session.setQuestDatabase(questDatabase)
+        loaded.session.setQuestDBName(questDBName)
         val sessionQuests = ArrayList<Quest>()
         for (quest in questRecords(loaded).values) {
             if (quest.questName.isNotEmpty()) {
@@ -155,6 +157,12 @@ object SaveSeamSupport {
         saveDatabaseOld.addEntry("player.utc", loaded.playerFile!!)
         smmDatabase.save()
         saveDatabaseOld.addEntry(loaded.smmName!!, loaded.smmFile!!)
+        if (loaded.session.isJournalDirty()) {
+            FileOutputStream(loaded.session.questDatabaseFile).use { out ->
+                loaded.session.getQuestDatabase()!!.save(out)
+            }
+            saveDatabaseOld.addEntry(loaded.session.getQuestDBName()!! + ".qdb", loaded.session.questDatabaseFile)
+        }
         loaded.session.writeSave()
 
         val saveDatabase = SaveDatabase(loaded.environment, saveDatabaseOld.getPath())

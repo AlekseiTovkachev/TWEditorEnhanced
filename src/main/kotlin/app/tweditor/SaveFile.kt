@@ -1,5 +1,6 @@
 package app.tweditor
 
+import java.io.FileOutputStream
 import java.io.IOException
 import javax.swing.SwingUtilities
 
@@ -35,6 +36,14 @@ class SaveFile(
             session.smmDatabase!!.save()
             session.saveDatabase!!.addEntry(session.getSmmName()!!, session.smmFile)
             progressDialog.updateProgress(80)
+
+            if (session.isJournalDirty()) {
+                FileOutputStream(session.questDatabaseFile).use { out ->
+                    session.getQuestDatabase()!!.save(out)
+                }
+                session.saveDatabase!!.addEntry(session.getQuestDBName()!! + ".qdb", session.questDatabaseFile)
+            }
+            progressDialog.updateProgress(85)
 
             session.writeSave()
             progressDialog.updateProgress(90)
