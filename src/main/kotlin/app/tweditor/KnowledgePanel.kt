@@ -7,72 +7,57 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
+import javax.swing.BoxLayout
 import javax.swing.ButtonGroup
-import javax.swing.JComboBox
-import javax.swing.JList
-import javax.swing.JOptionPane
+import javax.swing.JCheckBox
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JToggleButton
-import javax.swing.ListSelectionModel
 
 class KnowledgePanel(private val session: GameSession, private val environment: AppEnvironment) : JPanel() {
-    private class TabDef(
-        val title: String,
-        val list: JList<Any>,
-        val categories: List<String>,
-        val addCategory: String?,
-        val isJournal: Boolean
-    )
+    private class TabDef(val title: String, val catalogCategories: List<String>)
 
-    private class Row(val name: String, val label: String, val entries: List<JournalEntry>)
+    private class CatalogRow(val category: String, val entryId: String, val picture: String)
+
+    private class CatalogEntry(val category: String, val entryId: String, val label: String, val inSave: Boolean)
 
     private val tabbedPane = JPanel(CardLayout())
-    private val buttonBar = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4))
     private val cardLayout = tabbedPane.layout as CardLayout
+    private val buttonBar = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4))
     private val tabs = ArrayList<TabDef>()
-    private val rowsByTab = HashMap<TabDef, List<Row>>()
     private var selectedTab: TabDef? = null
-    private var lastList: DBList? = null
-    private var catalogCache: Map<String, List<String>>? = null
-
-    private val addButton = javax.swing.JButton("Add Entry")
-    private val removeButton = javax.swing.JButton("Remove Entry")
+    private var catalogCache: Map<String, List<CatalogRow>>? = null
+    private val templateNameCache = HashMap<String, String?>()
 
     init {
         layout = BorderLayout()
 
-        addTab("Characters", listOf("character"), "character")
-        addTab("Places", listOf("place"), "place")
-        addTab("Monsters", emptyList(), "bestiary")
-        addTab("Recipes", emptyList(), null)
-        addTab("Ingredients", emptyList(), null)
-        addTab("Glossary", listOf("info", "unique"), "info")
-        addTab("Tutorial", listOf("tutorial"), "tutorial")
+        val tabDefs = listOf(
+            TabDef("Characters", listOf("character")),
+            TabDef("Places", listOf("place")),
+            TabDef("Monsters", listOf("bestiary")),
+            TabDef("Recipes", listOf("recipe", "recipe_oil", "recipe_bomb")),
+            TabDef("Ingredients", SUBSTANCE_CATEGORIES.toList()),
+            TabDef("Glossary", listOf("info")),
+            TabDef("Tutorial", listOf("tutorial", "alchemy")))
 
         val buttonGroup = ButtonGroup()
-        for (tab in tabs) {
+        for (tab in tabDefs) {
+            tabs.add(tab)
             val button = JToggleButton(tab.title)
             button.actionCommand = tab.title
-            button.addActionListener {
-                selectTab(tab)
-            }
+            button.addActionListener { selectTab(tab) }
             buttonGroup.add(button)
             buttonBar.add(button)
-            if (tab === tabs[0]) {
+            if (tabs.size == 1) {
                 button.isSelected = true
             }
         }
 
-        addButton.addActionListener { addEntry() }
-        removeButton.addActionListener { removeEntry() }
-
-        val editBar = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4))
-        editBar.add(addButton)
-        editBar.add(removeButton)
-
-        val southBar = JPanel(BorderLayout())
-        southBar.add(editBar, BorderLayout.WEST)
+        val hintLabel = JLabel("Ticked entries are written into the save on the next Save.")
+        val southBar = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4))
+        southBar.add(hintLabel)
 
         add(buttonBar, BorderLayout.NORTH)
         add(tabbedPane, BorderLayout.CENTER)
@@ -80,25 +65,12 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
         selectTab(tabs[0])
     }
 
-    private fun addTab(title: String, categories: List<String>, addCategory: String?) {
-        val list = JList<Any>()
-        list.visibleRowCount = 18
-        list.selectionMode = ListSelectionModel.SINGLE_SELECTION
-        val tab = TabDef(title, list, categories, addCategory, isJournal = addCategory != null || title == "Monsters")
-        tabs.add(tab)
-        tabbedPane.add(title, JScrollPane(list))
-    }
-
     private fun selectTab(tab: TabDef) {
         selectedTab = tab
         cardLayout.show(tabbedPane, tab.title)
-        val editable = tab.addCategory != null
-        addButton.isEnabled = editable
-        removeButton.isEnabled = editable && tab !== tabs[2]
     }
 
     fun setFields(list: DBList) {
-        lastList = list
         refresh()
     }
 
@@ -106,158 +78,171 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
     }
 
     private fun refresh() {
+        tabbedPane.removeAll()
         for (tab in tabs) {
-            val rows: List<Row> = when {
-                tab.title == "Characters" || tab.title == "Places" || tab.title == "Glossary" || tab.title == "Tutorial" ->
-                    journalRows(tab.categories)
-                tab.title == "Monsters" -> monsterRows()
-                tab.title == "Recipes" -> recipeRows()
-                else -> ingredientRows()
+            val checklist = JPanel()
+            checklist.layout = BoxLayout(checklist, BoxLayout.PAGE_AXIS)
+            for (entry in catalogEntries(tab)) {
+                val checkBox = JCheckBox(entry.label)
+                checkBox.isSelected = entry.inSave
+                checkBox.addActionListener {
+                    try {
+                        if (checkBox.isSelected) {
+                            session.addJournalEntry(entry.category, entry.entryId)
+                        } else {
+                            session.removeJournalEntries(listOf(JournalEntry(entry.category, entry.entryId, false)))
+                        }
+                    } catch (exc: Throwable) {
+                        Main.logException("Unable to edit journal entry", exc)
+                    }
+                }
+                checklist.add(checkBox)
             }
-            rowsByTab[tab] = rows
-            val labels = rows.map { it.label }
-            tab.list.setListData(labels.toTypedArray())
-            tab.list.selectedIndex = -1
+            tabbedPane.add(tab.title, JScrollPane(checklist))
         }
+        val tab = selectedTab ?: tabs[0]
+        cardLayout.show(tabbedPane, tab.title)
+        revalidate()
+        repaint()
     }
 
-    private fun journalRows(categories: List<String>): List<Row> {
-        val journalData = session.getJournalData() ?: return emptyList()
-        val entries = ArrayList<JournalEntry>()
-        for (category in categories) {
-            entries.addAll(journalData.entriesInCategory(category))
-        }
-        return groupRows(entries)
-    }
-
-    private fun monsterRows(): List<Row> {
-        val journalData = session.getJournalData() ?: return emptyList()
-        val entries = ArrayList<JournalEntry>()
-        for (entry in journalData.entries) {
-            if (!NON_MONSTER_CATEGORIES.contains(entry.category)) {
-                entries.add(entry)
-            }
-        }
-        if (entries.isEmpty()) {
-            return listOf(Row("(no monsters learned yet)", "(no monsters learned yet)", emptyList()))
-        }
-        return groupRows(entries)
-    }
-
-    private fun groupRows(entries: List<JournalEntry>): List<Row> {
-        val grouped = LinkedHashMap<String, MutableList<JournalEntry>>()
-        for (entry in entries) {
-            val name = JournalEntryNames.displayName(entry.entryId)
-            grouped.getOrPut(name) { ArrayList() }.add(entry)
-        }
-        val rows = ArrayList<Row>()
-        for (groupedEntry in grouped) {
-            val name = groupedEntry.key
-            val group = groupedEntry.value
-            val unread = group.any { !it.isRead }
-            rows.add(Row(name, name + if (unread) " (unread)" else "", group))
-        }
-        return rows.sortedBy { it.name.lowercase() }
-    }
-
-    private fun recipeRows(): List<Row> {
-        val labels = ArrayList<String>()
-        appendAlchemySection(labels, "AlchKnowledge", "AlchRecipName")
-        if (labels.isEmpty()) {
-            labels.add("(no formulas known)")
-        }
-        return labels.map { Row(it, it, emptyList()) }
-    }
-
-    private fun ingredientRows(): List<Row> {
-        val labels = ArrayList<String>()
-        appendAlchemySection(labels, "AlchIdent", "AlchSubstance")
+    private fun catalogEntries(tab: TabDef): List<CatalogEntry> {
         val journalData = session.getJournalData()
+        val inSave = HashMap<String, JournalEntry>()
         if (journalData != null) {
-            val substances = ArrayList<JournalEntry>()
-            for (substance in SUBSTANCE_CATEGORIES) {
-                substances.addAll(journalData.entriesInCategory(substance))
-            }
-            substances.sortBy { it.entryId }
-            for (substance in substances) {
-                labels.add(JournalEntryNames.displayName(substance.entryId) + unreadSuffix(substance))
+            for (entry in journalData.entries) {
+                inSave[entry.category + ":" + entry.entryId.lowercase()] = entry
             }
         }
-        if (labels.isEmpty()) {
-            labels.add("(no ingredients identified)")
-        }
-        return labels.map { Row(it, it, emptyList()) }
-    }
 
-    private fun appendAlchemySection(labels: MutableList<String>, elementName: String, fieldName: String) {
-        val list = lastList ?: return
-        val element = list.getElement(elementName)
-        if (element == null || element.getType() != DBElement.LIST) {
-            return
+        val result = LinkedHashMap<String, CatalogEntry>()
+        fun put(category: String, entryId: String, label: String) {
+            val key = category + ":" + entryId.lowercase()
+            val entry = inSave[key]
+            val unread = if (entry != null && !entry.isRead) " (unread)" else ""
+            result[key] = CatalogEntry(category, entryId, label + unread, entry != null)
         }
-        val entries = element.getValue() as DBList
-        for (item in entries) {
-            val fields = item.getValue() as DBList
-            val resref = fields.getString(fieldName)
-            if (resref.isNotEmpty()) {
-                labels.add(resolveItemName(resref))
-            }
-        }
-    }
 
-    private fun addEntry() {
-        val tab = selectedTab ?: return
-        val category = tab.addCategory ?: return
         val catalog = journalCatalog()
-        val knownIds = catalog?.get(category) ?: emptyList()
-
-        val combo = JComboBox<String>()
-        for (id in knownIds) {
-            combo.addItem(id)
-        }
-        combo.isEditable = true
-        combo.selectedItem = ""
-
-        val pane = JOptionPane(combo, JOptionPane.PLAIN_MESSAGE, JOptionPane.OK_CANCEL_OPTION)
-        val dialog = pane.createDialog(this, "Add Journal Entry (" + category + ")")
-        dialog.isVisible = true
-        if (pane.value != JOptionPane.OK_OPTION) {
-            return
-        }
-        val entryId = (combo.selectedItem as? String)?.trim() ?: ""
-        if (entryId.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No entry id supplied", "No Entry", 0)
-            return
+        for (category in tab.catalogCategories) {
+            val rows = catalog?.get(category) ?: emptyList()
+            for (row in rows) {
+                put(row.category, row.entryId, rowLabel(row))
+            }
         }
 
-        session.addJournalEntry(category, entryId)
-        refresh()
+        if (tab.title == "Ingredients" || tab.title == "Glossary") {
+            val uniqueRows = catalog?.get("unique") ?: emptyList()
+            for (row in uniqueRows) {
+                val isIngredient = row.picture.startsWith("je_ingr")
+                if (isIngredient == (tab.title == "Ingredients")) {
+                    put(row.category, row.entryId, rowLabel(row))
+                }
+            }
+        }
+
+        if (journalData != null) {
+            for (entry in journalData.entries) {
+                val key = entry.category + ":" + entry.entryId.lowercase()
+                if (result.containsKey(key)) {
+                    continue
+                }
+                val belongsToTab = if (tab.title == "Monsters") {
+                    !NON_MONSTER_CATEGORIES.contains(entry.category)
+                } else {
+                    tab.catalogCategories.contains(entry.category)
+                }
+                if (belongsToTab) {
+                    put(entry.category, entry.entryId, fallbackLabel(entry.category, entry.entryId))
+                }
+            }
+        }
+
+        return result.values.sortedBy { it.label.lowercase() }
     }
 
-    private fun removeEntry() {
-        val tab = selectedTab ?: return
-        if (!tab.isJournal) {
-            return
+    private fun rowLabel(row: CatalogRow): String {
+        if (row.entryId.startsWith("it_")) {
+            val name = itemTemplateName(row.entryId)
+            if (name != null) {
+                return withVariant(row.entryId, name)
+            }
         }
-        val index = tab.list.selectedIndex
-        if (index < 0) {
-            JOptionPane.showMessageDialog(this, "You must select an entry to remove", "No Entry Selected", 0)
-            return
+        if (row.picture.startsWith("je_ingr")) {
+            val resref = "it_ingr_" + row.picture.substring("je_ingr".length)
+            val name = itemTemplateName(resref)
+            if (name != null) {
+                return withVariant(row.entryId, name)
+            }
+            return withVariant(row.entryId, "Ingredient " + row.picture)
         }
-        val rows = rowsByTab[tab] ?: return
-        val row = rows.getOrNull(index) ?: return
-        if (row.entries.isEmpty()) {
-            return
-        }
-        val option = JOptionPane.showConfirmDialog(this, "Remove the selected journal entry?  The change is written when you save.", "Remove Entry", 0)
-        if (option != 0) {
-            return
-        }
-        session.removeJournalEntries(row.entries)
-        refresh()
+        return withVariant(row.entryId, JournalEntryNames.displayName(row.entryId))
     }
 
-    private fun journalCatalog(): Map<String, List<String>>? {
+    private fun fallbackLabel(category: String, entryId: String): String {
+        if (entryId.startsWith("it_")) {
+            val name = itemTemplateName(entryId)
+            if (name != null) {
+                return withVariant(entryId, name)
+            }
+        }
+        return withVariant(entryId, JournalEntryNames.displayName(entryId))
+    }
+
+    private fun withVariant(entryId: String, label: String): String {
+        val sep = entryId.indexOf('/')
+        if (sep < 0) {
+            return label
+        }
+        val variant = entryId.substring(sep + 1)
+        if (variant.isEmpty() || variant == "info" || variant == "basic") {
+            return label
+        }
+        return label + " (" + variant + ")"
+    }
+
+    private fun itemTemplateName(resref: String): String? {
+        if (templateNameCache.containsKey(resref.lowercase())) {
+            return templateNameCache[resref.lowercase()]
+        }
+        var name: String? = null
+        for (itemTemplate in environment.itemTemplates) {
+            if (itemTemplate.resourceName.equals(resref, ignoreCase = true)) {
+                name = itemTemplate.itemName
+                break
+            }
+        }
+        if (name == null) {
+            val entryObject = environment.resourceFiles[resref.lowercase() + ".uti"]
+            if (entryObject != null) {
+                val input: InputStream? = try {
+                    when (entryObject) {
+                        is KeyEntry -> entryObject.getInputStream()
+                        is File -> FileInputStream(entryObject)
+                        else -> null
+                    }
+                } catch (exc: IOException) {
+                    null
+                }
+                if (input != null) {
+                    try {
+                        input.use { stream ->
+                            val database = Database(environment)
+                            database.load(stream)
+                            val fields = database.getTopLevelStruct()!!.getValue() as DBList
+                            name = fields.getString("LocalizedName").ifEmpty { null }
+                        }
+                    } catch (exc: Throwable) {
+                        name = null
+                    }
+                }
+            }
+        }
+        templateNameCache[resref.lowercase()] = name
+        return name
+    }
+
+    private fun journalCatalog(): Map<String, List<CatalogRow>>? {
         catalogCache?.let { return it }
         val entryObject = environment.resourceFiles["journal.2da"] ?: return null
         val input: InputStream = try {
@@ -269,7 +254,7 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
         } catch (exc: IOException) {
             return null
         }
-        val map = HashMap<String, MutableList<String>>()
+        val map = HashMap<String, MutableList<CatalogRow>>()
         try {
             val lines = input.use { stream ->
                 stream.readBytes().toString(Charsets.ISO_8859_1).lines()
@@ -290,7 +275,8 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
                 val category = columnValue(columns, tokens, "Category")
                 val entryId = columnValue(columns, tokens, "EntryId")
                 if (category.isNotEmpty() && entryId.isNotEmpty()) {
-                    map.getOrPut(category.lowercase()) { ArrayList() }.add(entryId)
+                    val picture = columnValue(columns, tokens, "Picture")
+                    map.getOrPut(category.lowercase()) { ArrayList() }.add(CatalogRow(category, entryId, picture))
                 }
             }
         } catch (exc: IOException) {
@@ -302,30 +288,17 @@ class KnowledgePanel(private val session: GameSession, private val environment: 
 
     private fun columnValue(columns: List<String>, tokens: List<String>, name: String): String {
         val index = columns.indexOf(name)
-        if (index < 0 || index + 1 >= tokens.size) {
+        if (index < 0 || index >= tokens.size) {
             return ""
         }
-        val value = tokens[index + 1].trim()
+        val value = tokens[index].trim()
         return if (value == "****") "" else value
-    }
-
-    private fun unreadSuffix(entry: JournalEntry): String {
-        return if (entry.isRead) "" else " (unread)"
-    }
-
-    private fun resolveItemName(resref: String): String {
-        for (itemTemplate in environment.itemTemplates) {
-            if (itemTemplate.resourceName.equals(resref, ignoreCase = true)) {
-                return itemTemplate.itemName
-            }
-        }
-        return resref
     }
 
     companion object {
         private val SUBSTANCE_CATEGORIES = setOf(
             "hydragenum", "vermilion", "rebis", "quebrith", "aether", "vitriol")
         private val NON_MONSTER_CATEGORIES = SUBSTANCE_CATEGORIES + setOf(
-            "recipe", "character", "place", "info", "tutorial", "unique", "hidden")
+            "recipe", "recipe_oil", "recipe_bomb", "alchemy", "character", "place", "info", "tutorial", "unique", "hidden")
     }
 }
