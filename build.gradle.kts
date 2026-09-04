@@ -33,6 +33,7 @@ tasks.compileJava {
 }
 
 dependencies {
+    implementation(libs.flatlaf)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
@@ -51,6 +52,10 @@ tasks.jar {
             "Implementation-Title" to project.name,
             "Implementation-Version" to project.version
         )
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }) {
+        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     }
 }
 
@@ -110,7 +115,8 @@ tasks.register<Exec>("jpackageAppImage") {
         "--app-version", packageVersion,
         "--vendor", "AlekseiTovkachev",
         "--icon", file("res/TWEditor.ico").absolutePath,
-        "--java-options", "-Xmx256m",
+                "--java-options", "-Xmx256m",
+                "--java-options", "--enable-native-access=ALL-UNNAMED",
         "--runtime-image", runtimeImageDir.get().asFile.absolutePath,
         "--dest", image.absolutePath
     )

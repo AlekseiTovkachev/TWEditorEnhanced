@@ -1,5 +1,6 @@
 package app.tweditor;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,7 +16,6 @@ import java.util.regex.Pattern;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 import javax.swing.filechooser.FileSystemView;
 
 public class Main
@@ -203,7 +203,7 @@ public class Main
       properties.setProperty("game.path", gamePath);
       properties.setProperty("temp.path", tmpDir);
 
-      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+      FlatLightLaf.setup();
       SwingUtilities.invokeLater(new Runnable() {
         public void run() {
           Main.createAndShowGUI();
