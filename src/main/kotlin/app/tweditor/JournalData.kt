@@ -20,7 +20,10 @@ class JournalData(topList: DBList) {
                 val sep = entry.indexOf(':')
                 val category = if (sep > 0) entry.substring(0, sep) else ""
                 val entryId = if (sep > 0) entry.substring(sep + 1) else entry
-                this.entries.add(JournalEntry(category.lowercase(), entryId, fields.getInteger("EntryRead") == 1))
+                this.entries.add(
+                    JournalEntry(
+                        category.lowercase(), entryId, fields.getInteger("EntryRead") == 1,
+                        fields.getInteger("EntryTOD").toLong()))
             }
         }
 
@@ -48,4 +51,4 @@ class JournalData(topList: DBList) {
     }
 }
 
-class JournalEntry(val category: String, val entryId: String, val isRead: Boolean)
+class JournalEntry(val category: String, val entryId: String, val isRead: Boolean, val timeOfDay: Long = 0)

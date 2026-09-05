@@ -3,6 +3,7 @@ package app.tweditor
 class Quest @Throws(DBException::class) constructor(private val resourceName: String, private val questElement: DBElement) {
     val questName: String
     val questState: Int
+    val motherDb: String
     private var questModified = false
 
     init {
@@ -12,6 +13,7 @@ class Quest @Throws(DBException::class) constructor(private val resourceName: St
         var fieldList = questElement.getValue() as DBList
 
         this.questName = fieldList.getString("QuestLocName").trim()
+        this.motherDb = fieldList.getString("MotherDB").lowercase()
 
         val mainPhase = fieldList.getElement("MainPhase")
         if (mainPhase == null || mainPhase.getType() != 15) {
