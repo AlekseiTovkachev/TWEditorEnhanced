@@ -169,6 +169,19 @@ class SaveDatabase(val environment: AppEnvironment, file: File) {
         this.savePrefix = savePrefix
     }
 
+    fun repathEntries() {
+        for (entry in entries) {
+            entry.repathTo(saveName, environment.fileSeparator)
+        }
+    }
+
+    fun renameEntry(oldBaseName: String, newBaseName: String) {
+        val entry = getEntry(oldBaseName) ?: return
+        entryMap.remove(entry.resourceName)
+        entry.renameBaseName(newBaseName, environment.fileSeparator)
+        entryMap[entry.resourceName] = entry
+    }
+
     fun getName(): String = saveName
 
     fun getPath(): String = file.getPath()

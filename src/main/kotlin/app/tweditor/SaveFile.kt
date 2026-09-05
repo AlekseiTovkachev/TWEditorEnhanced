@@ -1,5 +1,6 @@
 package app.tweditor
 
+import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import javax.swing.SwingUtilities
@@ -7,12 +8,17 @@ import javax.swing.SwingUtilities
 class SaveFile(
     private val progressDialog: ProgressDialog,
     private val session: GameSession,
-    private val environment: AppEnvironment
+    private val environment: AppEnvironment,
+    private val targetFile: File? = null
 ) : Thread() {
     private var saveSuccessful = false
 
     override fun run() {
         try {
+            if (targetFile != null) {
+                SavePipeline.rebindToCopy(session, environment, targetFile)
+            }
+
             session.database!!.save()
             progressDialog.updateProgress(15)
 

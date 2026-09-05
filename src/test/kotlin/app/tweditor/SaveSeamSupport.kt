@@ -157,6 +157,19 @@ object SaveSeamSupport {
         return records
     }
 
+    /**
+     * Save-as at the seam: rebinds the session to a working copy at [target]
+     * (the same SavePipeline.rebindToCopy path the app's Save As command uses)
+     * and then runs the normal write pipeline into that copy. The original
+     * file on disk is never touched.
+     */
+    fun saveAs(loaded: Loaded, target: File) {
+        SavePipeline.rebindToCopy(loaded.session, loaded.environment, target)
+        loaded.saveDatabase = loaded.session.saveDatabase
+        loaded.smmName = loaded.session.getSmmName()
+        save(loaded)
+    }
+
     fun save(loaded: Loaded) {
         val ifoDatabase = loaded.ifoDatabase!!
         val modDatabaseOld = loaded.modDatabase!!

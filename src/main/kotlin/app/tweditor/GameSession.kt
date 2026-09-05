@@ -27,6 +27,10 @@ class GameSession(tmpDir: File) {
     private var dataModified = false
     private var dataChanging = false
     private var saveBackedUp = false
+    private var draftDirty = false
+    private var baseline: SessionBaseline? = null
+
+    val validationGates: MutableList<ValidationGate> = ArrayList()
 
     fun getSmmName(): String? = smmName
     fun setSmmName(smmName: String?) {
@@ -51,6 +55,51 @@ class GameSession(tmpDir: File) {
     fun isDataModified(): Boolean = dataModified
     fun setDataModified(dataModified: Boolean) {
         this.dataModified = dataModified
+        this.draftDirty = dataModified
+    }
+
+    fun isDraftDirty(): Boolean = draftDirty
+
+    fun createBaseline() {
+        val ifoTop = database?.getTopLevelStruct()
+        val playerTop = playerDatabase?.getTopLevelStruct()
+        val smmTop = smmDatabase?.getTopLevelStruct()
+        val qdbTop = questDatabase?.getTopLevelStruct()
+        baseline = if (ifoTop != null && playerTop != null && smmTop != null) {
+            SessionBaseline(ifoTop.clone(), playerTop.clone(), smmTop.clone(), qdbTop?.clone(), journalDirty)
+        } else {
+            null
+        }
+        this.draftDirty = false
+    }
+
+    fun applyDraft() {
+        createBaseline()
+    }
+
+    fun revertToBaseline(): Boolean {
+        val snapshot = baseline ?: return false
+        val ifoDatabase = database ?: return false
+        ifoDatabase.setTopLevelStruct(snapshot.ifoTop.clone())
+        playerDatabase!!.setTopLevelStruct(snapshot.playerTop.clone())
+        smmDatabase!!.setTopLevelStruct(snapshot.smmTop.clone())
+        val questDatabase = questDatabase
+        if (questDatabase != null && snapshot.qdbTop != null) {
+            questDatabase.setTopLevelStruct(snapshot.qdbTop.clone())
+            setJournalData(JournalData(questDatabase.getTopLevelStruct()!!.getValue() as DBList))
+        }
+        this.journalDirty = snapshot.journalDirty
+        this.dataModified = false
+        this.draftDirty = false
+        return true
+    }
+
+    fun runValidation(): List<String> {
+        val problems = ArrayList<String>()
+        for (gate in validationGates) {
+            problems.addAll(gate.validate(this))
+        }
+        return problems
     }
 
     fun isDataChanging(): Boolean = dataChanging
@@ -167,6 +216,16 @@ class GameSession(tmpDir: File) {
         this.questDBName = null
         this.journalDirty = false
         this.dataModified = false
+        this.draftDirty = false
+        this.baseline = null
         this.saveBackedUp = false
     }
 }
+
+private class SessionBaseline(
+    val ifoTop: DBElement,
+    val playerTop: DBElement,
+    val smmTop: DBElement,
+    val qdbTop: DBElement?,
+    val journalDirty: Boolean
+)

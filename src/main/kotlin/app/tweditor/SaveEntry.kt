@@ -7,7 +7,7 @@ import java.io.InputStream
 import java.io.OutputStream
 
 class SaveEntry private constructor(
-    private val resourcePath: String,
+    private var resourcePath: String,
     resourceFile: File?,
     resourceOffset: Long,
     resourceLength: Int,
@@ -20,7 +20,8 @@ class SaveEntry private constructor(
     var resourceLength: Int
     var resourceDataList: MutableList<ByteArray>?
     val isCompressed: Boolean
-    val resourceName: String
+    var resourceName: String
+        private set
 
     init {
         this.resourceFile = resourceFile
@@ -64,6 +65,28 @@ class SaveEntry private constructor(
     }
 
     fun getResourcePath(): String = resourcePath
+
+    fun repathTo(saveName: String, fileSeparator: String) {
+        val index = resourcePath.indexOf(fileSeparator)
+        val suffix = if (index >= 0) resourcePath.substring(index) else fileSeparator + resourcePath
+        this.resourcePath = saveName + suffix
+        updateName(fileSeparator)
+    }
+
+    fun renameBaseName(newBaseName: String, fileSeparator: String) {
+        val index = resourcePath.indexOf(fileSeparator)
+        this.resourcePath = if (index >= 0) resourcePath.substring(0, index + 1) + newBaseName else newBaseName
+        updateName(fileSeparator)
+    }
+
+    private fun updateName(fileSeparator: String) {
+        val index = resourcePath.lastIndexOf(fileSeparator)
+        this.resourceName = if (index >= 0) {
+            resourcePath.substring(index + 1).lowercase()
+        } else {
+            resourcePath.lowercase()
+        }
+    }
 
     fun setResourceFile(file: File, offset: Int, length: Int) {
         this.resourceFile = file

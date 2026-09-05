@@ -22,6 +22,9 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
     private var windowMinimized = false
     private var titleModified = false
     private var restoreBackupItem = JMenuItem("Restore Backup")
+    private var applyChangesItem = JMenuItem("Apply Changes")
+    private var revertChangesItem = JMenuItem("Revert Changes")
+    private var saveAsItem = JMenuItem("Save As…")
 
     @JvmField
     val session = GameSession(File(environment.tmpDir))
@@ -48,16 +51,22 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
     val inventoryPanel = InventoryPanel(session, environment)
 
     @JvmField
+    val storagePanel = StoragePanel(session, environment)
+
+    @JvmField
     val questsPanel = QuestsPanel(session, environment)
 
     @JvmField
     val knowledgePanel = KnowledgePanel(session, environment)
 
     @JvmField
+    val statisticsPanel = StatisticsPanel(session)
+
+    @JvmField
     val difficultyPanel = DifficultyPanel(session, environment)
 
     init {
-        environment.icons.lateIconListener = Runnable { this.repaint() }
+        environment.icons.addLateIconListener { this.repaint() }
 
         defaultCloseOperation = DISPOSE_ON_CLOSE
 
@@ -96,6 +105,21 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         menuItem.addActionListener(this)
         menu.add(menuItem)
 
+        saveAsItem.actionCommand = "save as"
+        saveAsItem.addActionListener(this)
+        saveAsItem.isEnabled = false
+        menu.add(saveAsItem)
+
+        applyChangesItem.actionCommand = "apply changes"
+        applyChangesItem.addActionListener(this)
+        applyChangesItem.isEnabled = false
+        menu.add(applyChangesItem)
+
+        revertChangesItem.actionCommand = "revert changes"
+        revertChangesItem.addActionListener(this)
+        revertChangesItem.isEnabled = false
+        menu.add(revertChangesItem)
+
         restoreBackupItem.actionCommand = "restore backup"
         restoreBackupItem.addActionListener(this)
         restoreBackupItem.isEnabled = false
@@ -110,21 +134,6 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
 
         menuItem = JMenuItem("Exit")
         menuItem.actionCommand = "exit"
-        menuItem.addActionListener(this)
-        menu.add(menuItem)
-
-        menuBar.add(menu)
-
-        menu = JMenu("Actions")
-        menu.mnemonic = 65
-
-        menuItem = JMenuItem("Unpack Save")
-        menuItem.actionCommand = "unpack save"
-        menuItem.addActionListener(this)
-        menu.add(menuItem)
-
-        menuItem = JMenuItem("Repack Save")
-        menuItem.actionCommand = "repack save"
         menuItem.addActionListener(this)
         menu.add(menuItem)
 
@@ -170,8 +179,16 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         tabbedPane.addTab("Inventory", panel)
 
         panel = JPanel(BorderLayout())
+        panel.add(storagePanel, BorderLayout.CENTER)
+        tabbedPane.addTab("Storage", panel)
+
+        panel = JPanel(BorderLayout())
         panel.add(questsPanel, BorderLayout.CENTER)
         tabbedPane.addTab("Quests", panel)
+
+        panel = JPanel(BorderLayout())
+        panel.add(statisticsPanel, BorderLayout.CENTER)
+        tabbedPane.addTab("Statistics", panel)
 
         panel = JPanel(BorderLayout())
         panel.add(knowledgePanel, BorderLayout.CENTER)
@@ -198,6 +215,16 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             super.setTitle("The Witcher Save Editor - " + session.saveDatabase!!.getName())
             titleModified = false
         }
+        updateActions()
+    }
+
+    private fun updateActions() {
+        val saveOpen = session.saveDatabase != null
+        val draftDirty = saveOpen && session.isDraftDirty()
+        saveAsItem.isEnabled = saveOpen
+        applyChangesItem.isEnabled = draftDirty
+        revertChangesItem.isEnabled = draftDirty
+        restoreBackupItem.isEnabled = saveOpen && session.hasSaveBackup()
     }
 
     override fun actionPerformed(ae: ActionEvent?) {
@@ -214,6 +241,15 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
                 JOptionPane.showMessageDialog(this, "No save file is open", "No Save", 0)
             } else if (action == "save") {
                 saveFile()
+                setTitle(null)
+            } else if (action == "save as") {
+                saveFileAs()
+                setTitle(null)
+            } else if (action == "apply changes") {
+                applyChanges()
+                setTitle(null)
+            } else if (action == "revert changes") {
+                revertChanges()
                 setTitle(null)
             } else if (action == "restore backup") {
                 restoreBackup()
@@ -275,28 +311,16 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         val success = dialog.showDialog()
 
         if (success) {
-            updateRestoreBackupItem()
+            updateActions()
             try {
                 session.setDataChanging(true)
-
-                var list = session.database!!.getTopLevelStruct()!!.getValue() as DBList
-                list = list.getElement("Mod_PlayerList")!!.getValue() as DBList
-                list = list.getElement(0).getValue() as DBList
-
-                statsPanel.setFields(list)
-                attributesPanel.setFields(list)
-                signsPanel.setFields(list)
-                stylesPanel.setFields(list)
-                equipPanel.setFields(list)
-                inventoryPanel.setFields(list)
-                questsPanel.setFields(list)
-                knowledgePanel.setFields(list)
-                difficultyPanel.setFields(list)
-                tabbedPane.selectedIndex = 0
-                tabbedPane.isVisible = true
-
+                bindPanels()
                 session.setDataChanging(false)
                 session.setDataModified(false)
+                session.createBaseline()
+
+                tabbedPane.selectedIndex = 0
+                tabbedPane.isVisible = true
             } catch (exc: DBException) {
                 Main.logException("Database format is not valid", exc)
             } catch (exc: IOException) {
@@ -305,8 +329,31 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         }
     }
 
+    private fun bindPanels() {
+        var list = session.database!!.getTopLevelStruct()!!.getValue() as DBList
+        list = list.getElement("Mod_PlayerList")!!.getValue() as DBList
+        list = list.getElement(0).getValue() as DBList
+
+        statsPanel.setFields(list)
+        attributesPanel.setFields(list)
+        signsPanel.setFields(list)
+        stylesPanel.setFields(list)
+        equipPanel.setFields(list)
+        inventoryPanel.setFields(list)
+        storagePanel.setFields(session.smmDatabase!!.getTopLevelStruct()!!.getValue() as DBList)
+        questsPanel.setFields(list)
+        knowledgePanel.setFields(list)
+        statisticsPanel.setFields(list)
+        difficultyPanel.setFields(list)
+    }
+
     private fun saveFile(): Boolean {
         if (session.saveDatabase == null) {
+            return false
+        }
+        val problems = session.runValidation()
+        if (problems.isNotEmpty()) {
+            JOptionPane.showMessageDialog(this, buildProblemsMessage(problems), "Validation Failed", 0)
             return false
         }
         var saved = false
@@ -322,21 +369,140 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
             inventoryPanel.getFields(list)
             questsPanel.getFields(list)
             knowledgePanel.getFields(list)
+            statisticsPanel.getFields(list)
             difficultyPanel.getFields(list)
 
             val dialog = ProgressDialog(this, "Saving " + session.saveDatabase!!.getName())
             val task = SaveFile(dialog, session, environment)
             task.start()
             saved = dialog.showDialog()
-            updateRestoreBackupItem()
+            updateActions()
             if (saved) {
                 session.setDataModified(false)
+                session.createBaseline()
             }
         } catch (exc: DBException) {
             Main.logException("Database format is not valid", exc)
         }
 
         return saved
+    }
+
+    private fun saveFileAs() {
+        if (session.saveDatabase == null) {
+            return
+        }
+        val currentFile = session.saveDatabase!!.getFile()!!
+        val currentName = session.saveDatabase!!.getName()
+
+        val chooser = JFileChooser(currentFile.getParentFile())
+        chooser.putClientProperty("FileChooser.useShellFolder", java.lang.Boolean.valueOf(environment.useShellFolder))
+        chooser.dialogTitle = "Save As"
+        chooser.approveButtonText = "Save Copy"
+        chooser.selectedFile = File(currentName + " copy.TheWitcherSave")
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return
+        }
+        var target = chooser.selectedFile
+        if (!target.getName().endsWith(".TheWitcherSave")) {
+            target = File(target.getParentFile(), target.getName() + ".TheWitcherSave")
+        }
+        val saveName = target.getName().removeSuffix(".TheWitcherSave")
+        if (!Regex("\\d{6} .*").matches(saveName)) {
+            JOptionPane.showMessageDialog(this,
+                "Save names must start with six digits and a space (the game's own naming), for example '000030 - My Save'.",
+                "Invalid Save Name", 0)
+            return
+        }
+        if (target.exists()) {
+            val option = JOptionPane.showConfirmDialog(this,
+                "The file '" + target.getName() + "' already exists. Overwrite it?", "Overwrite Save", 1)
+            if (option != 0) {
+                return
+            }
+        }
+        if (target.getPath().equals(currentFile.getPath(), ignoreCase = true)) {
+            saveFile()
+            return
+        }
+
+        val problems = session.runValidation()
+        if (problems.isNotEmpty()) {
+            JOptionPane.showMessageDialog(this, buildProblemsMessage(problems), "Validation Failed", 0)
+            return
+        }
+
+        val dialog = ProgressDialog(this, "Saving " + target.getName())
+        val task = SaveFile(dialog, session, environment, target)
+        task.start()
+        val saved = dialog.showDialog()
+        updateActions()
+
+        if (saved) {
+            session.setDataModified(false)
+            session.createBaseline()
+            val option = JOptionPane.showConfirmDialog(this,
+                "The save was written to '" + target.getName() + "'. Open it now?", "Save As", 1)
+            if (option == 0) {
+                loadSave(target)
+            } else {
+                setOpenSaveTitle()
+            }
+        }
+    }
+
+    private fun applyChanges() {
+        if (session.saveDatabase == null) {
+            return
+        }
+        if (!session.isDraftDirty()) {
+            JOptionPane.showMessageDialog(this, "There are no uncommitted changes to apply.", "Nothing to Apply", 1)
+            return
+        }
+        val problems = session.runValidation()
+        if (problems.isNotEmpty()) {
+            JOptionPane.showMessageDialog(this, buildProblemsMessage(problems), "Validation Failed", 0)
+            return
+        }
+        session.applyDraft()
+        JOptionPane.showMessageDialog(this,
+            "Changes applied. They become the revert point; use Save to write them to the save file.",
+            "Changes Applied", 1)
+    }
+
+    private fun revertChanges() {
+        if (session.saveDatabase == null || !session.isDraftDirty()) {
+            return
+        }
+        val option = JOptionPane.showConfirmDialog(this,
+            "Discard all changes made since the last Apply, Save, or Open? The save file on disk is not touched.",
+            "Revert Changes", 1)
+        if (option != 0) {
+            return
+        }
+        try {
+            session.revertToBaseline()
+            session.setDataChanging(true)
+            bindPanels()
+            session.setDataChanging(false)
+            session.setDataModified(false)
+        } catch (exc: DBException) {
+            Main.logException("Database format is not valid", exc)
+        } catch (exc: IOException) {
+            Main.logException("I/O error while rebuilding tabbed panes", exc)
+        }
+    }
+
+    private fun buildProblemsMessage(problems: List<String>): String {
+        val message = StringBuilder(256)
+        message.append("<html>The following problems must be fixed first:<br><br>")
+        for (problem in problems) {
+            message.append("&bull; ")
+            message.append(problem)
+            message.append("<br>")
+        }
+        message.append("</html>")
+        return message.toString()
     }
 
     private fun restoreBackup() {
@@ -359,10 +525,6 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         }
     }
 
-    private fun updateRestoreBackupItem() {
-        restoreBackupItem.isEnabled = session.hasSaveBackup()
-    }
-
     private fun closeFile(): Boolean {
         if (session.saveDatabase == null) {
             return true
@@ -380,7 +542,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         }
 
         session.close()
-        updateRestoreBackupItem()
+        updateActions()
         tabbedPane.isVisible = false
         return true
     }
