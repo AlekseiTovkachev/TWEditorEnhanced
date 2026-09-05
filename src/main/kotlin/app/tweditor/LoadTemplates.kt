@@ -20,37 +20,9 @@ class LoadTemplates(private val progressDialog: ProgressDialog, private val envi
             var currentProgress = 0
 
             for (mapEntry in mapSet) {
-                var resourceName: String? = null
-                var input: InputStream? = null
-                val entryObject = mapEntry.value
-                if (entryObject is File) {
-                    val name = entryObject.getName().lowercase()
-                    val sep = name.lastIndexOf('.')
-                    if (sep > 0 && name.substring(sep) == ".uti") {
-                        resourceName = name.substring(0, sep)
-                        input = FileInputStream(entryObject)
-                    }
-                } else if (entryObject is KeyEntry) {
-                    val name = entryObject.fileName.lowercase()
-                    val sep = name.lastIndexOf('.')
-                    if (sep > 0 && name.substring(sep) == ".uti") {
-                        resourceName = entryObject.resourceName
-                        input = entryObject.getInputStream()
-                    }
-                }
-
-                if (input != null) {
-                    val database = Database(environment)
-                    database.load(input)
-                    input.close()
-                    val fieldList = database.getTopLevelStruct()!!.getValue() as DBList
-                    val itemName = fieldList.getString("LocalizedName")
-                    val itemDescription = fieldList.getString("Description")
-                    if (itemName.isNotEmpty() && itemDescription.isNotEmpty()) {
-                        val resourceElement = DBElement(11, 0, "TemplateResRef", resourceName)
-                        fieldList.setElement("TemplateResRef", resourceElement)
-                        environment.itemTemplates.add(ItemTemplate(fieldList))
-                    }
+                val template = processEntry(mapEntry.value, environment)
+                if (template != null) {
+                    environment.itemTemplates.add(template)
                 }
 
                 processedCount++
@@ -73,6 +45,62 @@ class LoadTemplates(private val progressDialog: ProgressDialog, private val envi
 
         SwingUtilities.invokeLater {
             progressDialog.closeDialog(success)
+        }
+    }
+
+    companion object {
+        /**
+         * Parses one resource-map entry into an item template, or null when the
+         * entry is not a named .uti. The app runs this on the loader thread;
+         * tests call the whole scan directly.
+         */
+        fun processEntry(entryObject: Any, environment: AppEnvironment): ItemTemplate? {
+            var resourceName: String? = null
+            var input: InputStream? = null
+            if (entryObject is File) {
+                val name = entryObject.getName().lowercase()
+                val sep = name.lastIndexOf('.')
+                if (sep > 0 && name.substring(sep) == ".uti") {
+                    resourceName = name.substring(0, sep)
+                    input = FileInputStream(entryObject)
+                }
+            } else if (entryObject is KeyEntry) {
+                val name = entryObject.fileName.lowercase()
+                val sep = name.lastIndexOf('.')
+                if (sep > 0 && name.substring(sep) == ".uti") {
+                    resourceName = entryObject.resourceName
+                    input = entryObject.getInputStream()
+                }
+            }
+
+            if (input == null) {
+                return null
+            }
+
+            val database = Database(environment)
+            database.load(input)
+            input.close()
+            val fieldList = database.getTopLevelStruct()!!.getValue() as DBList
+            val itemName = fieldList.getString("LocalizedName")
+            // Description is often empty (books, gems); only a name is required.
+            if (itemName.isEmpty()) {
+                return null
+            }
+            val resourceElement = DBElement(11, 0, "TemplateResRef", resourceName)
+            fieldList.setElement("TemplateResRef", resourceElement)
+            return ItemTemplate(fieldList)
+        }
+
+        /** The app's template scan, callable from tests (no progress dialog). */
+        fun loadItemTemplates(environment: AppEnvironment) {
+            environment.itemTemplates = ArrayList(environment.resourceFiles.size)
+            for (mapEntry in environment.resourceFiles.entries) {
+                val template = processEntry(mapEntry.value, environment)
+                if (template != null) {
+                    environment.itemTemplates.add(template)
+                }
+            }
+            environment.icons.primeTemplates(environment.itemTemplates)
         }
     }
 }

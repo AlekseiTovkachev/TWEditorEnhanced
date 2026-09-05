@@ -32,6 +32,37 @@ class GameIconsTest {
     }
 
     @Test
+    fun everyTalentLabelResolvesToATexture() {
+        val environment = environment() ?: return assumeTrue(false, "game install not present")
+        val library = environment.icons
+
+        val labels = ArrayList<String>()
+        val attributeNames = listOf("Strength", "Dexterity", "Endurance", "Intelligence")
+        for (attribute in attributeNames) {
+            for (level in 1..5) {
+                labels.add(attribute + level)
+                labels.add(attribute + level + " Upgrade1")
+                labels.add(attribute + level + " Upgrade2")
+            }
+            // the third upgrade row starts at level 2
+            for (level in 2..4) {
+                labels.add(attribute + level + " Upgrade3")
+            }
+        }
+        assertTrue(labels.size >= 70, "expected the full talent grid, got " + labels.size)
+        library.primeTalentTalents(labels)
+        val deadline = System.currentTimeMillis() + 20_000
+        for (label in labels) {
+            var icon = library.talentIcon(label, 18)
+            while (icon == null && System.currentTimeMillis() < deadline) {
+                Thread.sleep(25)
+                icon = library.talentIcon(label, 18)
+            }
+            assertNotNull(icon, "no icon decoded for talent '" + label + "'")
+        }
+    }
+
+    @Test
     fun itemIconResrefFollowsTheIitChain() {
         val environment = environment() ?: return assumeTrue(false, "game install not present")
         val library = environment.icons
@@ -75,9 +106,27 @@ class GameIconsTest {
 
         val swordFields = templateFields(environment, "it_stlswd_001")
         library.primeTemplates(listOf(ItemTemplate(swordFields)))
-        val itemIcon = poll(10_000) { library.itemIcon(swordFields, 24) }
+        val itemIcon = poll(10_000) { library.itemIcon(swordFields) }
         assertNotNull(itemIcon, "item icon did not decode in time")
-        assertEquals(24, itemIcon!!.iconWidth)
+        // swords take a 2x5-slot cell: long side 48, portrait aspect
+        assertEquals(48, itemIcon!!.iconHeight)
+        assertTrue(itemIcon.iconWidth < itemIcon.iconHeight, "sword icon should be portrait, was ${itemIcon.iconWidth}x${itemIcon.iconHeight}")
+    }
+
+    @Test
+    fun everyInventoryTextureFlipsExceptTheAbilityAtlas() {
+        val environment = environment() ?: return assumeTrue(false, "game install not present")
+        val library = environment.icons
+
+        for (flipped in listOf(
+            "iit_stlswd_001", "iit_svswd_006", "iit_potion_004", "iit_drink_001",
+            "iit_food_001", "iit_gem_001", "iit_grease_020", "iit_bomb_006", "iit_trophy_001",
+            "iit_scroll_014", "it_scroll_115", "iit_ingr_026", "it_ingr_026", "iit_book_001"
+        )) {
+            assertTrue(library.needsVerticalFlip(flipped), flipped + " is stored bottom-up in the game archives")
+        }
+        assertTrue(!library.needsVerticalFlip("ui_ab_aar1"))
+        assertTrue(!library.needsVerticalFlip(IconLibrary.PLACEHOLDER))
     }
 
     private fun <T> poll(timeoutMs: Long, probe: () -> T?): T? {

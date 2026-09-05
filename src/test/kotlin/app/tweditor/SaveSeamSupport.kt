@@ -39,6 +39,17 @@ object SaveSeamSupport {
         return saves?.sortedBy { it.getName() } ?: emptyList()
     }
 
+    /**
+     * A throwaway copy of a local save: golden round-trips write/reload through
+     * the copy so the owner's files are never mutated by a test run.
+     */
+    fun tempCopy(save: File): File {
+        val work = Files.createTempDirectory("tweditor-save")
+        val copy = work.resolve(save.getName()).toFile()
+        Files.copy(save.toPath(), copy.toPath())
+        return copy
+    }
+
     fun load(environment: AppEnvironment, saveFile: File, workDir: Path): Loaded {
         return loadInto(environment, saveFile, workDir, GameSession(workDir.toFile()))
     }

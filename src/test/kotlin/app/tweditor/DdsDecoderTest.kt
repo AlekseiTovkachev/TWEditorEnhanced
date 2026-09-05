@@ -40,6 +40,37 @@ class DdsDecoderTest {
     }
 
     @Test
+    fun decodesDxt5SixValueModeReservedCodes() {
+        val pixels = DdsDecoder.decode(
+            dds(width = 4, height = 4, fourCC = "DXT5") {
+                // alpha block: alpha0 <= alpha1 selects the 6-value mode where
+                // code 6 decodes to fully transparent and code 7 to fully opaque
+                byte(0)               // alpha0 = 0
+                byte(255)             // alpha1 = 255
+                val codes = intArrayOf(0, 1, 2, 6, 7, 0, 1, 2, 6, 7, 0, 1, 2, 6, 7, 0)
+                var bits = 0L
+                for (pixel in 0 until 16) {
+                    bits = bits or (codes[pixel].toLong() shl (3 * pixel))
+                }
+                for (i in 0 until 6) {
+                    byte(((bits ushr (8 * i)) and 0xFF).toInt())
+                }
+                // color block: uniform white, all color indices 0
+                short(0xFFFF)
+                short(0xFFFF)
+                int(0)
+            }
+        )
+        // codes: 0 -> alpha0=0, 1 -> alpha1=255, 2 -> (4*0+1*255)/5=51,
+        // 6 -> transparent, 7 -> opaque
+        assertEquals(0x00FFFFFF.toInt(), pixels.argb[0])
+        assertEquals(0xFFFFFFFF.toInt(), pixels.argb[1])
+        assertEquals(0x33FFFFFF.toInt(), pixels.argb[2])
+        assertEquals(0x00FFFFFF.toInt(), pixels.argb[3])
+        assertEquals(0xFFFFFFFF.toInt(), pixels.argb[4])
+    }
+
+    @Test
     fun decodesDxt5WithSeparateBlocksPerRow() {
         val pixels = DdsDecoder.decode(
             dds(width = 4, height = 8, fourCC = "DXT5") {
@@ -52,12 +83,17 @@ class DdsDecoderTest {
                 short(0xF800)
                 short(0xF800)
                 int(0)
-                // row 2: fully transparent green (alpha0=0; all codes resolve to 0)
+                // row 2: fully transparent green (alpha0=0 selects the 6-value
+                // mode; code 6 decodes to fully transparent)
                 byte(0)
                 byte(255)
-                int(0x0FFFFFFF)
-                byte(0xFF)
-                byte(0xFF)
+                var bits = 0L
+                for (pixel in 0 until 16) {
+                    bits = bits or (6L shl (3 * pixel))
+                }
+                for (i in 0 until 6) {
+                    byte(((bits ushr (8 * i)) and 0xFF).toInt())
+                }
                 short(0x07E0)
                 short(0x07E0)
                 int(0)

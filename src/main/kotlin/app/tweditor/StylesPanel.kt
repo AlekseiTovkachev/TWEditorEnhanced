@@ -29,8 +29,9 @@ class StylesPanel(private val session: GameSession, private val environment: App
                     if (fieldNames[tab][row][col].isNotEmpty()) {
                         val name = fieldNames[tab][row][col]
                         val abilityLabel = databaseLabels[tab][row][col]
-                        val field = JCheckBox(name)
-                        field.icon = environment.icons.abilityIcon(abilityLabel, ABILITY_ICON_SIZE)
+                        val field = AbilityCheckBox(name, abilityLabel, ABILITY_ICON_SIZE) { label, size ->
+                            environment.icons.abilityIcon(label, size)
+                        }
                         field.actionCommand = Integer.toString(tab * 100 + row * 10 + col)
                         field.addActionListener(this)
                         this.fields[tab][row][col] = field

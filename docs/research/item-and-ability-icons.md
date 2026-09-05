@@ -6,9 +6,18 @@
 
 ## Formats
 
+- All game icon DDS files are DXT5 (BC3): one 8-byte alpha block followed by one 8-byte color block per 4x4 tile, standard layout (verified byte-for-byte against Windows WIC across every icon class).
+- The first DdsDecoder mapped both reserved 6-value-mode alpha codes to transparent; the BC3 spec reserves **code 6 = fully transparent, code 7 = fully opaque** when `alpha0 <= alpha1`. The game's art uses code 7 in shaded interiors, so opaque regions of icons (goose-fat pot body, scroll parchment) decoded with holes — the "missing pixels" seen in-game vs the editor. Fixed in `DdsDecoder.interpolateAlpha`; verified by decoding 12 textures across all classes (pot/sword/scroll/drink/potion/grease/gem/bomb/food/trophy/other/ability) and diffing against WIC: byte-identical (max color delta 1 = rounding, zero alpha deltas).
+
 - The install's `main.key` indexes **34,109 resources; 8,827 are DDS and 0 are TGA** (58 BMP, 44 JPG). Everything icon-shaped is **DDS**. `TgaDecoder` stays for save screenshots only; the icon path decodes DDS.
 - All 1,378 icon-candidate textures (`iit_*`, `ui_ab_*`) are **DXT5** (the DX9 fourcc), dimensions 16x32, 32x32, 32x128, 64x32, 64x64, 64x128, 64x256, 128x128, with mipmaps. `question_mark.dds` (the engine's placeholder icon) is 32x32 DXT1, 824 bytes.
 - The sword world texture `it_stlswd_001.dds` is 512x256 DXT1 — same-name `it_*` textures are world-model diffuse maps, not icons; the DXT1 support is still worth having for the direct-resref fallback.
+
+## Orientation: everything flips except the ability atlas
+
+The game's inventory renderer un-flips its textures at draw time (D3D UV convention): **all** `iit_*`/`it_*` icon art is authored vertically flipped in the file — weapons (blade-up stored, handle-up in game), potions (cork-down stored), drinks, food, gems, trophies, **scrolls** (matcher: in-game scroll crops correlate 0.80 with the flipped texture and −0.02 with the stored one), **books** (`iit_scroll_005`/`iit_book_*`), and **ingredients** (the goose-fat pot's white content sits at the bottom of the stored texture, at the top in game; 0.88 vs 0.57).
+
+A detour is recorded here because it cost two review rounds: two rounds of owner feedback seemed to show scrolls/ingredients stored in display orientation, and the flip was made conditional on the `*_scroll_*`/`*_ingr_*` prefixes — which re-broke books ("upside down again"). The round-2 evidence turned out to be screenshots from the stale unflipped build. The corroborating computational check (crop in-game icons from the owner's screenshots, NCC-match against all ~370 textures in both orientations) settles it: uniform flip, exempting only `ui_ab_*` and the placeholder. `CanRotateIcon` in `baseitems.2da` is not the discriminator (drink=0 flips, scroll=0 flips too), and every icon sits in the same BIF with identical DDS header shapes — the orientation is a property of the game's draw call, not the asset batch.
 
 ## Item icons: the `iit_` composition rule
 
@@ -20,6 +29,8 @@ The inventory icon is a texture named after the item's **base-item class and app
 - Fallback `<TemplateResRef>.dds` direct covers amulet/necklace-style textures whose class textures don't exist (`it_amulet_001.dds` etc.; 147 templates total, 31 not already covered by the composition rule).
 - Fallback `iit_<DefaultModel minus `it_`>` catches odd ModelPart values.
 - The remainder (~110 of 1,100) are NPC prop tools (`w_h_*`, BaseItem 43/53), quest potion variants, and `it_v*` misc — never normal player inventory content. They fall back to `question_mark`, the engine's own placeholder.
+
+The game draws each icon into its row's **`InvSlotWidth × InvSlotHeight` cell footprint** (swords 2x5, witcher armor 3x3, most everything else 1x1), so the editor scales item art to that box: 1x1 items stay 32 px squares, multi-slot items grow with their cell shape (portrait for swords, square for armor).
 
 ## Ability icons: `witcher_sgn_tree.luc` / `witcher_cs_trees.luc`
 

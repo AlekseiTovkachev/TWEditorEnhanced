@@ -21,17 +21,22 @@ class AttributesPanel(private val session: GameSession, private val environment:
         val rows = fieldNames[0].size
         val cols = fieldNames[0][0].size
         fields = Array(tabs) { Array(rows) { arrayOfNulls(cols) } }
+        val talentLabels = ArrayList<String>()
         for (tab in 0 until tabs) {
             val panel = JPanel(GridLayout(0, cols, 5, 5))
             for (row in 0 until rows) {
                 for (col in 0 until cols) {
                     if (fieldNames[tab][row][col].isNotEmpty()) {
-                        val field = JCheckBox(fieldNames[tab][row][col])
+                        val label = databaseLabels[tab][row][col]
+                        val field = AbilityCheckBox(fieldNames[tab][row][col], label, TALENT_ICON_SIZE) { abilityLabel, size ->
+                            environment.icons.talentIcon(abilityLabel, size)
+                        }
                         field.actionCommand = Integer.toString(tab * 100 + row * 10 + col)
                         field.addActionListener(this)
                         this.fields[tab][row][col] = field
                         panel.add(field)
-                        labelMap[databaseLabels[tab][row][col]] = field
+                        labelMap[label] = field
+                        talentLabels.add(label)
                     } else {
                         panel.add(JLabel())
                     }
@@ -41,6 +46,7 @@ class AttributesPanel(private val session: GameSession, private val environment:
             tabbedPane.addTab(tabNames[tab], panel)
         }
 
+        environment.icons.primeTalentTalents(talentLabels)
         add(tabbedPane)
     }
 
@@ -202,6 +208,7 @@ class AttributesPanel(private val session: GameSession, private val environment:
     }
 
     companion object {
+        private const val TALENT_ICON_SIZE = 18
         private val tabNames = arrayOf("Strength", "Dexterity", "Stamina", "Intelligence")
 
         private val fieldNames = arrayOf(

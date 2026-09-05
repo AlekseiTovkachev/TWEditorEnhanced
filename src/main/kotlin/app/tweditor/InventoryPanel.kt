@@ -1,14 +1,12 @@
 package app.tweditor
 
 import java.awt.BorderLayout
-import java.awt.Dimension
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
-import javax.swing.Box
 import javax.swing.DefaultListModel
 import javax.swing.JButton
 import javax.swing.JLabel
@@ -43,10 +41,9 @@ class InventoryPanel(private val session: GameSession, private val environment: 
         itemsField.selectionMode = 0
         itemsField.visibleRowCount = 20
         itemsField.prototypeCellValue = InventoryItem("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm", DBElement(14, 0, "", DBList(environment, 0)))
-        itemsField.cellRenderer = ItemListCellRenderer(environment, ICON_SIZE)
-        itemsField.fixedCellHeight = ICON_SIZE + 10
+        itemsField.cellRenderer = ItemListCellRenderer(environment)
+        itemsField.fixedCellHeight = ROW_HEIGHT
         var scrollPane = JScrollPane(itemsField)
-        val preferredSize: Dimension = scrollPane.preferredSize
 
         var buttonPane = JPanel()
         var button = JButton("Examine Item")
@@ -73,10 +70,9 @@ class InventoryPanel(private val session: GameSession, private val environment: 
         selectionModel.selectionMode = 1
 
         availField.selectionModel = selectionModel
-        availField.cellRenderer = ItemTreeCellRenderer(environment, ICON_SIZE)
-        availField.rowHeight = ICON_SIZE + 6
+        availField.cellRenderer = ItemTreeCellRenderer(environment)
+        availField.rowHeight = ROW_HEIGHT
         scrollPane = JScrollPane(availField)
-        scrollPane.preferredSize = preferredSize
 
         buttonPane = JPanel()
         button = JButton("Examine Item")
@@ -93,11 +89,12 @@ class InventoryPanel(private val session: GameSession, private val environment: 
         availPane.add(JLabel("Available Items", 0), "North")
         availPane.add(scrollPane, "Center")
         availPane.add(buttonPane, "South")
-        availPane.preferredSize = itemsPane.preferredSize
 
-        add(itemsPane)
-        add(Box.createHorizontalStrut(15))
-        add(availPane)
+        // Fill the tab so the scroll panes shrink with the window; otherwise a
+        // tall preferred size clips both lists below the fold with no scrollbar.
+        layout = BorderLayout()
+        add(itemsPane, "West")
+        add(availPane, "Center")
     }
 
     override fun actionPerformed(ae: ActionEvent?) {
@@ -432,6 +429,9 @@ class InventoryPanel(private val session: GameSession, private val environment: 
     fun getFields(list: DBList) {
     }
 
+    /** The available-item tree (for tests). */
+    internal fun availTree(): JTree = availField
+
     private fun insertItem(itemModel: DefaultListModel<InventoryItem>, item: InventoryItem) {
         val listSize = itemModel.size()
         var inserted = false
@@ -451,8 +451,10 @@ class InventoryPanel(private val session: GameSession, private val environment: 
     }
 
     companion object {
-        private const val ICON_SIZE = 32
-        private val categories = arrayOf("Bomb", "Book", "Drink", "Food", "Gem", "Grease", "Ingredient", "Jewelry", "Magical", "Potion", "Quest", "Upgrade", "Other")
+        private const val ROW_HEIGHT = 56
+        // The player's bags hold no weapons or armor in the game - those live
+        // on the paperdoll (Equipment tab) and in the storage chest.
+        internal val categories = arrayOf("Bomb", "Book", "Drink", "Food", "Gem", "Grease", "Ingredient", "Jewelry", "Magical", "Potion", "Quest", "Upgrade", "Other")
         private const val TAB_BOMB = 0
         private const val TAB_BOOK = 1
         private const val TAB_DRINK = 2
@@ -466,12 +468,14 @@ class InventoryPanel(private val session: GameSession, private val environment: 
         private const val TAB_QUEST = 10
         private const val TAB_UPGRADE = 11
         private const val TAB_OTHER = 12
-        private val categoryMappings = arrayOf(
-            intArrayOf(20, 7), intArrayOf(21, 8), intArrayOf(22, 9), intArrayOf(23, 7), intArrayOf(30, 1),
-            intArrayOf(32, 4), intArrayOf(33, 6), intArrayOf(34, 11), intArrayOf(37, 8), intArrayOf(38, 7),
-            intArrayOf(40, 10), intArrayOf(44, 3), intArrayOf(45, 12), intArrayOf(46, 5), intArrayOf(47, 0), intArrayOf(48, 2)
+        internal val categoryMappings = arrayOf(
+            intArrayOf(10, 9), intArrayOf(11, 9), intArrayOf(16, 12), intArrayOf(20, 7), intArrayOf(21, 8),
+            intArrayOf(22, 9), intArrayOf(23, 7), intArrayOf(27, 12), intArrayOf(28, 12), intArrayOf(30, 1),
+            intArrayOf(31, 12), intArrayOf(32, 4), intArrayOf(33, 6), intArrayOf(34, 11), intArrayOf(35, 8),
+            intArrayOf(37, 8), intArrayOf(38, 7), intArrayOf(40, 10), intArrayOf(44, 3), intArrayOf(45, 12),
+            intArrayOf(46, 5), intArrayOf(47, 0), intArrayOf(48, 2), intArrayOf(49, 12), intArrayOf(54, 12)
         )
 
-        private val substanceNames = arrayOf("Vitriol", "Rebis", "Aether", "Quebirth", "Hydragenum", "Vermilion", "Albedo", "Nigredo", "Rubedo")
+        internal val substanceNames = arrayOf("Vitriol", "Rebis", "Aether", "Quebirth", "Hydragenum", "Vermilion", "Albedo", "Nigredo", "Rubedo")
     }
 }

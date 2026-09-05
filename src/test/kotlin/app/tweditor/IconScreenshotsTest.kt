@@ -54,8 +54,8 @@ class IconScreenshotsTest {
         var frame: JFrame? = null
         SwingUtilities.invokeAndWait {
             val list = JList(items.toTypedArray())
-            list.cellRenderer = ItemListCellRenderer(environment, 32)
-            list.fixedCellHeight = 42
+            list.cellRenderer = ItemListCellRenderer(environment)
+            list.fixedCellHeight = 56
             val panel = JPanel(BorderLayout())
             panel.add(JLabel("Current Inventory"), BorderLayout.NORTH)
             panel.add(JScrollPane(list), BorderLayout.CENTER)
@@ -63,7 +63,7 @@ class IconScreenshotsTest {
             frame = JFrame("Icons: items")
             frame.contentPane = panel
             frame.pack()
-            frame.setSize(420, 560)
+            frame.setSize(420, 700)
             frame.isAlwaysOnTop = true
             frame.setLocationRelativeTo(null)
             frame.isVisible = true
@@ -107,7 +107,7 @@ class IconScreenshotsTest {
         val deadline = System.currentTimeMillis() + 30_000
         while (System.currentTimeMillis() < deadline) {
             val allLoaded = environment.itemTemplates.all { template ->
-                environment.icons.templateIcon(template, 32) != null
+                environment.icons.templateIcon(template) != null
             } && (SignsPanel.abilityLabels() + StylesPanel.abilityLabels()).all { label ->
                 environment.icons.abilityIcon(label, 18) != null
             }

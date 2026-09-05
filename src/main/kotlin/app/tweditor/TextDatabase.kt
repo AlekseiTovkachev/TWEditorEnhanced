@@ -144,6 +144,15 @@ class TextDatabase {
         return if (string.length >= 4 && string.substring(0, 4) == "****") {
             0
         } else {
+            parseNumber(string)
+        }
+    }
+
+    /** 2DA values may be decimal or 0x-prefixed hexadecimal (may exceed Int.MaxValue). */
+    private fun parseNumber(string: String): Int {
+        return if (string.length > 2 && (string.startsWith("0x") || string.startsWith("0X"))) {
+            java.lang.Integer.parseUnsignedInt(string.substring(2), 16)
+        } else {
             string.toInt()
         }
     }

@@ -173,7 +173,53 @@ Our fork's new per-instance editor (`ItemEditDialog.kt`, `ItemEdit.kt`) is, as f
 
 ---
 
+## Innkeeper storage (the `StoreRef = "storage"` system)
+
+The inn storage is **not** a `.utm` merchant store. Per the wiki's storage-mods page, shopkeepers and storage keepers share the creature field `StoreRef`: a shopkeeper's `StoreRef` names a `.utm` file, while a **storage keeper's `StoreRef` is the literal string `storage`** — an engine-managed, global store (which is why the stash is shared across every inn). "Stores and storage cannot co-exist in a single character template."
+
+Save-side anatomy (probed on real saves, 15 files, all Kaer Morhen):
+
+- Save archive entries: `player.utc`, one module `.sav` (RFILE holding `module.ifo` + area `.are`/`.git` pairs + triggers), `save_XXXXXX.smm`, `.qst`/`.qdb`, screenshot `.tga`. **No store/stash resource** (also zero resources matching inn/stor/stash/karcz/depozyt/schowek terms anywhere in the KEY-indexed game archives).
+- The player's bags live in `player.utc`: `ItemList` (4 sub-bags) + `Equip_ItemList` — what the editor edits today.
+- **Creature records inside area `.git` files carry the same inventory shape**: vesemir's record in `l08.git` has `ItemList`, `Equip_ItemList`, plus `StoreRef`/`StoreOID`. So any innkeeper instantiated in a saved area would carry its items in-record.
+- The smm carries the 13 game modules (`Meta_Mod_list`: outskirts_1, wyzimpoor_1, sewers, marshland, wyzimrich_3, wyzimpoor_3, marshland_3, village_4, oldmanor_5, wyzimold_5, wyzimburn, ice_plains, kaer_morhen) plus persistent `StoryNPC_list`/`MonsterNPCs` records — **no inventory fields** on those records.
+- All 15 local saves are from the `kaer_morhen` module, **which contains no inn** — the storage has nowhere to be in them, so the exact persistence point of the *contents* (innkeeper's in-area creature record vs a floating store object) is still unverified.
+- The KEY/BIF split matters: `main.key` indexes only DDS/UTI/2DA; creature `.utc` templates, `.dlg`, `.ncs`, and area files live in **BIF-internal variable tables the editor never reads** (BIF V1.1: 20-byte entries = id/offset/length/type at header offsets 8/16). Any deeper stash work means parsing BIF-internal tables.
+
+**Follow-up RESOLVED — the stash IS in the save (owner was right)**: with the inn save and the owner's exact item list (Barghest skull ×4, Temerian iron dagger, book, axe), a resref-accurate grep finds the chest: the stash lives in the save's meta database as **`smm/StoreList/<record>`** — the store object itself (`ObjectId` matching the innkeeper's `StoreOID`, `Template="storage"`, `IsStorage=1`) carrying an `ItemList` of plain item structs. The smm is per-save global state, which is exactly why the chest is shared by every innkeeper and persists with each save. (The first probe missed it: the grep terms were wrong — TW1 has no `it_axe` (it's `it_laxe`/`it_saxe`), the skull is `it_other_018` (other-class, not an ingredient), and the dagger is `it_dgr_001`.) **The storage chest is therefore editable**: `StoragePanel` (Storage tab) reads/edits that `ItemList` — add from the full template tree, remove, examine, per-instance edit — with a golden write/reload round-trip test (`StorageEditTest`) that also asserts every other archive entry stays unchanged. Saves that never used storage have no `StoreList` yet; the panel reports that and asks the player to use the chest once in-game first (synthesizing the store record is not attempted because the engine's ObjectId allocation is not understood).
+
+---
+
+## Equipment slots (the `WeaponSlot` field and the two 2DA tables)
+
+Each equipped item struct in `Mod_PlayerList[0]/Equip_ItemList` carries **`WeaponSlot` = a row index into the game's `weaponslots.2da`** (28 rows), NOT a per-item-type enum. Verified empirically across the local saves (steel sword→1, silver→2, dagger→3, long axe→10, fists pseudo-item→11, armor→27) and confirmed by the table itself:
+
+| Row | Slot | Flag | Notes |
+|-----|------|------|-------|
+| 0 | Hide | — | unequipped/pseudo |
+| 1 | Back_Normal | 0x8000 | steel sword, right back |
+| 2 | Back_Silver | 0x4000 | silver sword, left back |
+| 3 | Short_1 | 0x10000 | sidearm position 1 |
+| 4 | Short_2 | 0x20000 | sidearm position 2 |
+| 5 | Trophy | 0x80000 | |
+| 6 | Medalion | 0x100000 | the witcher medallion |
+| 7–9 | Elixir_1..3 | 0x200000/0x400000/0x800000 | drunk potions |
+| 10 | Big_Weapon | 0x40000 | long axes/hammers; **the steel sword's second position** |
+| 11 | Fists | 0x1000000 | the fists pseudo-item (BaseItem 36, hidden by the editor) |
+| 12–25 | belt/limb/head misc | various | Belt_Chest_front, Leg_Right, Forearm_R/L, Belt_Chest_back, Neck, Belt, Belt_*_Front, Belt_L/R, Arm_L/R, Head |
+| 26 | Left_Hand | 0x20 | **development leftover** (owner: the torch actually takes a sidearm slot; the editor does not offer this slot) |
+| 27 | Armor | 0x8000000 | |
+
+**Which slots an item may occupy = the `EquipableSlots` bitmask column in `baseitems.2da`** (same flags): steel sword `0x48030` → back + big-weapon + left hand (the two visible steel positions the owner sees in-game are rows 1 and 10); silver `0x4030` → back + left hand; dagger/short weapons `0x30010` → Short_1/Short_2 (the extra `0x10` bit has **no** weaponslots row — ignore it); potions and bombs `0xE00000` → Elixir_1..3; armor `0x8000000`; trophy `0x80000`; rings `0x88` → **Forearm_Right(14)/Forearm_Left(16)** (the paperdoll's wrist slots); necklaces `0x0` → **not equippable at all** in TW1; the medallion item class `0x100000`. The player struct also carries `WeapLastSlot` (the currently drawn weapon).
+
+**CORRECTION (owner, overriding the earlier socket speculation): nothing in the game is upgradeable** — armor has **no** upgrade sockets, and no item does; runes and "upgrade components" either provide a temporary bonus or serve as crafting ingredients. No socket model is needed; the baseitem classes (`upgrade_component` 34, rune armors `it_ran_*`) are ordinary items, not socket payloads.
+
+**Editor support**: `WeaponSlots.kt` embeds the row table (names + flags) and reads `EquipableSlots` from the game's `baseitems.2da`; EquipPanel shows the game's paperdoll as 12 slot rows (steel, silver, short ×2, big weapon, armor, trophy, rings ×2, elixirs ×3 — no Left_Hand) with each row populated or `(empty)`, duplicates grouped into one row (`Big weapon (x6)`, Remove peels one per click), *Move to Slot* (combo filtered by the item's mask and the paperdoll rows), *Remove*, and Add-into-the-selected-empty-slot (the template's mask must accept that slot; potions/bombs go in elixir slots carrying `StackSize = MaxStack`, rings/amulets in the forearm slots — one item per slot, enforced). Golden round-trip tests (`EquipSlotEditTest`, gated on the owner's save 30): the slot view's populated/empty rows, a slot move, and a second steel sword in the big-weapon position persist through write/reload with all other archive entries byte-identical. The storage chest displays in plain list order (all structs sit at `Repos 0,0` — no grid), so StoragePanel's **Sort Chest** rewrites the struct order by type (the storage tab order), then name/resref/stack, verified by `StorageEditTest`'s round trip.
+
+---
+
 ## Source register
+
 
 First-party / official:
 - D'jinni editor manual (official docs, community-mirrored): item editor fields — https://djinni.fandom.com/wiki/Module_and_area_creation
@@ -196,6 +242,7 @@ Community-primary:
 
 Our own probes (TWEditorEnhanced codebase / real saves):
 - Save item structs: `WpnAbilitySelf`/`WpnAbilityOpp` (`STRUCT 0xBABE`: `RnAbName`+`RnAbStk`), `ModelPart1`, `CustomCost` present; `Quality`/`WeaponType` absent; rusty sword `LocalizedName` = strref −1/empty. Ability DB binary (names + floats, labels `Damage_Mod`, `Silver_Mult`, `Parry_Mult`, e.g. `meteorite_red1_self`) inside `scripts00.bif`; no `abilities.2da` in `main.key`/`2da00.bif`.
+- Innkeeper storage probes (2026-09): 15 local saves scanned (all `kaer_morhen` module) — no store/stash resource or object tags; `l08.git` vesemir record carries `ItemList`/`Equip_ItemList`/`StoreRef`/`StoreOID`; smm `Meta_Mod_list` = 13 module names; `main.key` indexes only DDS(8826)/UTI(1100)/2DA(223). Mechanism per https://witcher.fandom.com/wiki/Storage_mods (`StoreRef="storage"`).
 - Editor behavior: `src/main/kotlin/app/tweditor/ItemEdit.kt`, `ItemEditDialog.kt`, `DBList.kt` (LSTRING precedence), `InventoryPanel.kt`, `LoadTemplates.kt`, tests `src/test/kotlin/app/tweditor/ItemEditTest.kt`.
 
 Explicitly unresolved:

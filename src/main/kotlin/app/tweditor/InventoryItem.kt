@@ -1,6 +1,6 @@
 package app.tweditor
 
-class InventoryItem(val name: String, element: DBElement) : Comparable<InventoryItem> {
+class InventoryItem(val name: String, element: DBElement, val detail: String? = null) : Comparable<InventoryItem> {
     val element: DBElement
     var count: Int
 
@@ -21,5 +21,8 @@ class InventoryItem(val name: String, element: DBElement) : Comparable<Inventory
         return diff
     }
 
-    override fun toString(): String = String.format("%s (%d)", name, count)
+    override fun toString(): String {
+        val label = String.format("%s (%d)", name, count)
+        return if (detail == null) label else label + " - " + detail
+    }
 }

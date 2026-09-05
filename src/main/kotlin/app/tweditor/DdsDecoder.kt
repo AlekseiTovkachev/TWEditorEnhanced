@@ -163,7 +163,9 @@ object DdsDecoder {
             alpha = (6 - code) * alpha0 + (code - 1) * alpha1
             denominator = 5
         } else {
-            alpha = 0
+            // 6-value mode reserves code 6 for fully transparent and
+            // code 7 for fully opaque pixels.
+            alpha = if (code == 7) 255 else 0
             denominator = 1
         }
         return fullArgb(if (denominator == 1) alpha else (alpha + denominator / 2) / denominator)

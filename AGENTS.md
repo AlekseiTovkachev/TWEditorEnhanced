@@ -42,6 +42,14 @@ The gated GUI tests (`tweditor.screenshots`) create real windows. Two rules keep
 
 Also: interrupting or timing out a gradle invocation does not stop the daemon - it keeps building in the background and a later rerun can report stale `UP-TO-DATE`. After a hung or killed run, check `jps -l` for stray `GradleDaemon`/test-worker JVMs and kill them before rerunning.
 
+## Image inspection budget
+
+Chat media accumulate toward the provider's 4.5 MiB request limit; exceeding it fails the whole turn with "Request body exceeds the 4.5 MiB limit". Every `Read` of an image attaches the full file to the conversation again, and screenshots the owner pastes are already in context.
+
+- Prefer a **text probe** over a visual one: render pixels to an ASCII brightness map written to `build/` and read that. This settles orientation, shape, and pixel questions without any image attachment.
+- When pixels must be seen, pre-shrink: ≤800 px on the long side, JPEG, temp dir (`%TEMP%\opencode`), and `Read` that one file once. Never re-Read an image already in context.
+- Never upscale a crop for inspection (a 4x PNG can reach hundreds of KB); downscale instead.
+
 ## Review builds
 
 The owner reviews finished work by running the app, not by reading the diff. Whenever you finish a piece of work, rebuild the Windows app image (`./gradlew packageWindowsAppImage`) and point the owner at the fresh exe: `build/app-image/TWEditor/TWEditor.exe` (launch detached with `Start-Process <path>` so the terminal can be closed).
