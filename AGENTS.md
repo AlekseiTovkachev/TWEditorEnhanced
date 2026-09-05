@@ -41,3 +41,7 @@ The gated GUI tests (`tweditor.screenshots`) create real windows. Two rules keep
 2. **Annotate gated UI test classes with `@Timeout`** so a stuck EDT fails that test instead of hanging the whole run.
 
 Also: interrupting or timing out a gradle invocation does not stop the daemon - it keeps building in the background and a later rerun can report stale `UP-TO-DATE`. After a hung or killed run, check `jps -l` for stray `GradleDaemon`/test-worker JVMs and kill them before rerunning.
+
+## Review builds
+
+The owner reviews finished work by running the app, not by reading the diff. Whenever you finish a piece of work, rebuild the Windows app image (`./gradlew packageWindowsAppImage`) and point the owner at the fresh exe: `build/app-image/TWEditor/TWEditor.exe` (launch detached with `Start-Process <path>` so the terminal can be closed).

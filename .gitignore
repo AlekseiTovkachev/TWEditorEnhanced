@@ -88,3 +88,6 @@ Temporary Items
 
 # Local test saves (owner-only fixtures; primary fixture lives in the repo, see issue #3)
 .local-saves/
+
+# Editor backups (a pre-write copy next to the save; not editable)
+*.bak

@@ -171,6 +171,15 @@ class SavePickerDialog(
         } else {
             chooser = JFileChooser()
         }
+        chooser.fileFilter = object : javax.swing.filechooser.FileFilter() {
+            override fun accept(file: File): Boolean {
+                return file.isDirectory || file.getName().endsWith(".TheWitcherSave")
+            }
+
+            override fun getDescription(): String {
+                return "The Witcher saves (*.TheWitcherSave)"
+            }
+        }
         chooser.dialogTitle = "Select Save"
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             selectedFile = chooser.selectedFile
@@ -238,8 +247,9 @@ class SavePickerDialog(
     }
 
     private fun toBufferedImage(tga: TgaImage): BufferedImage {
-        val image = BufferedImage(tga.width, tga.height, BufferedImage.TYPE_INT_ARGB)
-        image.setRGB(0, 0, tga.width, tga.height, tga.argb, 0, tga.width)
+        val height = tga.contentHeight(TgaImage.SCREENSHOT_PADDING)
+        val image = BufferedImage(tga.width, height, BufferedImage.TYPE_INT_ARGB)
+        image.setRGB(0, 0, tga.width, height, tga.argb, 0, tga.width)
         return image
     }
 

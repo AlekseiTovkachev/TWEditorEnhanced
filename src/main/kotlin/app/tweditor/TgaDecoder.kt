@@ -7,7 +7,37 @@ import java.io.InputStream
 /**
  * A decoded TGA image: a row-major, top-left-first grid of opaque-when-24-bit ARGB pixels.
  */
-class TgaImage(val width: Int, val height: Int, val argb: IntArray)
+class TgaImage(val width: Int, val height: Int, val argb: IntArray) {
+    /**
+     * The height after trimming trailing rows of uniform padding color. The game
+     * letterboxes its screenshot into the 64x64 buffer and leaves the remaining
+     * rows at flat 127-gray, so the picture itself is shorter than the entry.
+     */
+    fun contentHeight(padding: Int): Int {
+        var trimmed = height
+        while (trimmed > 0 && isUniformRow(trimmed - 1, padding)) {
+            trimmed--
+        }
+        return if (trimmed == 0) height else trimmed
+    }
+
+    private fun isUniformRow(y: Int, padding: Int): Boolean {
+        for (x in 0 until width) {
+            if (argb[y * width + x] != padding) {
+                return false
+            }
+        }
+        return true
+    }
+
+    companion object {
+        /**
+         * The flat gray (127, 127, 127) the game leaves in the unused part of the
+         * screenshot buffer.
+         */
+        val SCREENSHOT_PADDING = 0xFF7F7F7F.toInt()
+    }
+}
 
 /**
  * Pure-Kotlin decoder for the uncompressed and run-length-encoded true-color TGA

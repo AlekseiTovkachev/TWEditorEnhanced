@@ -256,6 +256,11 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
     }
 
     private fun loadSave(file: File) {
+        if (file.getName().endsWith(SaveBackup.BACKUP_SUFFIX)) {
+            JOptionPane.showMessageDialog(this, "Backups are not editable. Open the original save; restore the backup from the File menu if you need it.", "Backup Selected", 0)
+            return
+        }
+
         var saveName = file.getName()
         val sep = saveName.lastIndexOf('.')
         if (sep > 0) {

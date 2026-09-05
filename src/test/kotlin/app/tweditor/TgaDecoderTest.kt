@@ -171,6 +171,18 @@ class TgaDecoderTest {
         }
     }
 
+    @Test
+    fun fixtureScreenshotContentEndsAboveThePaddingRows(@TempDir tempDir: Path) {
+        val save = SaveSeamSupport.copyFixtureTo(tempDir)
+        val saveDatabase = SaveDatabase(environment, save)
+        saveDatabase.load()
+        val tgaEntry = saveDatabase.entries.first { it.resourceName.endsWith(".tga") }
+        val image = TgaDecoder.decode(tgaEntry.getInputStream().use { it.readBytes() })
+
+        assertEquals(36, image.contentHeight(TgaImage.SCREENSHOT_PADDING),
+            "the game letterboxes the 16:9 screenshot into the 64x64 buffer; the padding rows must not show")
+    }
+
     private fun tga(
         imageType: Int,
         width: Int,
