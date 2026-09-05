@@ -13,10 +13,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 class LocalSavesRoundTripTest {
     @Test
     fun localSavesRoundTripWithIdenticalFacts(@TempDir tempDir: Path) {
-        val savesDir = Path.of(System.getProperty("tweditor.localSaves", ".local-saves")).toFile()
-        val saves = savesDir.listFiles { _, name -> name.endsWith(".TheWitcherSave") }
-        assumeTrue(saves != null && saves.isNotEmpty(),
-            "no local saves in '" + savesDir + "' - drop *.TheWitcherSave files there to exercise them (they are gitignored and stay local)")
+        val saves = SaveSeamSupport.localSaves()
+        assumeTrue(saves.isNotEmpty(),
+            "no local saves in '" + System.getProperty("tweditor.localSaves", ".local-saves") + "' - drop *.TheWitcherSave files there to exercise them (they are gitignored and stay local)")
 
         for (i in saves.indices) {
             val workDir = Files.createDirectory(tempDir.resolve("save-" + i))

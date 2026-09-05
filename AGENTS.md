@@ -32,3 +32,12 @@ Any code path that mutates save data must ship with a write/reload edit test, fo
 4. Assert the edit persisted **and** untouched archive entries remain byte-identical (CRC digests, per `entryDigests`).
 
 Never claim an edit works from in-memory state alone - the round-trip through the real file is the proof. Working copies only; never mutate a save outside a temp directory.
+
+## Swing tests
+
+The gated GUI tests (`tweditor.screenshots`) create real windows. Two rules keep them from hanging the build (a hung test JVM stalls gradle with no output and no test report):
+
+1. **Never call `SwingUtilities.invokeAndWait { modalDialog.isVisible = true }`.** A modal dialog shown this way blocks the dispatch until it closes, so the call never returns and the test JVM hangs forever. Show the dialog with `invokeLater`, wait, then close it with `isVisible = false` (see `SavePickerDialogTest.capture`).
+2. **Annotate gated UI test classes with `@Timeout`** so a stuck EDT fails that test instead of hanging the whole run.
+
+Also: interrupting or timing out a gradle invocation does not stop the daemon - it keeps building in the background and a later rerun can report stale `UP-TO-DATE`. After a hung or killed run, check `jps -l` for stray `GradleDaemon`/test-worker JVMs and kill them before rerunning.

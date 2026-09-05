@@ -29,6 +29,16 @@ object SaveSeamSupport {
         return target.toFile()
     }
 
+    /**
+     * The real saves the owner drops into the gitignored .local-saves directory
+     * (sorted by file name); empty when there are none.
+     */
+    fun localSaves(): List<File> {
+        val savesDir = Path.of(System.getProperty("tweditor.localSaves", ".local-saves")).toFile()
+        val saves = savesDir.listFiles { _, name -> name.endsWith(".TheWitcherSave") }
+        return saves?.sortedBy { it.getName() } ?: emptyList()
+    }
+
     fun load(environment: AppEnvironment, saveFile: File, workDir: Path): Loaded {
         return loadInto(environment, saveFile, workDir, GameSession(workDir.toFile()))
     }

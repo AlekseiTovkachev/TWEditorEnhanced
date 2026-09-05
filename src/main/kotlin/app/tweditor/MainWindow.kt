@@ -229,30 +229,27 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
         }
     }
 
+    private val summaryCache = SaveSummaryCache(environment)
+
     private fun openFile() {
         if (!closeFile()) {
             return
         }
 
         val currentDirectory = environment.properties.getProperty("current.directory")
-        val chooser: JFileChooser
+        var savesDirectory: File? = null
         if (currentDirectory != null) {
             val dirFile = File(currentDirectory)
-            chooser = if (dirFile.exists() && dirFile.isDirectory) {
-                JFileChooser(dirFile)
-            } else {
-                JFileChooser(environment.gamePath + environment.fileSeparator + "saves")
+            if (dirFile.exists() && dirFile.isDirectory) {
+                savesDirectory = dirFile
             }
-        } else {
-            chooser = JFileChooser(environment.gamePath + environment.fileSeparator + "saves")
+        }
+        if (savesDirectory == null) {
+            savesDirectory = File(environment.gamePath + environment.fileSeparator + "saves")
         }
 
-        chooser.putClientProperty("FileChooser.useShellFolder", java.lang.Boolean.valueOf(environment.useShellFolder))
-        chooser.dialogTitle = "Select Save File"
-        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
-            return
-        }
-        val file = chooser.selectedFile
+        val picker = SavePickerDialog(this, environment, savesDirectory, summaryCache)
+        val file = picker.showDialog() ?: return
         environment.properties.setProperty("current.directory", file.getParent())
 
         loadSave(file)
