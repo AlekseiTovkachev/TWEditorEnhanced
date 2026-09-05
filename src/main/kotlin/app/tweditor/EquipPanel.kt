@@ -37,6 +37,8 @@ class EquipPanel(private val session: GameSession, private val environment: AppE
         itemsField.selectionMode = 0
         itemsField.visibleRowCount = 20
         itemsField.prototypeCellValue = InventoryItem("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm", DBElement(14, 0, "", DBList(environment, 0)))
+        itemsField.cellRenderer = ItemListCellRenderer(environment, ICON_SIZE)
+        itemsField.fixedCellHeight = ICON_SIZE + 10
         var scrollPane = JScrollPane(itemsField)
         val preferredSize: Dimension = scrollPane.preferredSize
 
@@ -65,6 +67,8 @@ class EquipPanel(private val session: GameSession, private val environment: AppE
         selectionModel.selectionMode = 1
 
         availField.selectionModel = selectionModel
+        availField.cellRenderer = ItemTreeCellRenderer(environment, ICON_SIZE)
+        availField.rowHeight = ICON_SIZE + 6
         scrollPane = JScrollPane(availField)
         scrollPane.preferredSize = preferredSize
 
@@ -347,6 +351,7 @@ class EquipPanel(private val session: GameSession, private val environment: AppE
     }
 
     companion object {
+        private const val ICON_SIZE = 32
         private val categories = arrayOf("Armor", "Silver Sword", "Steel Sword", "Trophy")
         private const val TAB_ARMOR = 0
         private const val TAB_SILVER_SWORD = 1

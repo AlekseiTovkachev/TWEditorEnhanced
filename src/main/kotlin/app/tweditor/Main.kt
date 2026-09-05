@@ -121,19 +121,7 @@ object Main {
             environment.stringsDatabase = StringsDatabase(stringsFile)
 
             val keyDatabase = KeyDatabase(environment, installDataPath + environment.fileSeparator + "main.key")
-            val keyEntries = keyDatabase.getEntries()
-            val resourceFiles = HashMap<String, Any>(keyEntries.size)
-            for (keyEntry in keyEntries) {
-                val name = keyEntry.fileName.lowercase()
-                val sep = name.lastIndexOf('.')
-                if (sep > 0) {
-                    val ext = name.substring(sep)
-                    if (ext == ".2da" || ext == ".uti") {
-                        resourceFiles[name] = keyEntry
-                    }
-                }
-            }
-            environment.resourceFiles = resourceFiles
+            environment.resourceFiles = resourceFilesFrom(keyDatabase)
 
             processOverrides(environment, File(installDataPath))
 
@@ -170,6 +158,21 @@ object Main {
         }
     }
 
+    /** Resource extensions the editor needs: data tables, item templates, and icon textures. */
+    val resourceExtensions: Set<String> = setOf(".2da", ".uti", ".dds", ".tga")
+
+    fun resourceFilesFrom(keyDatabase: KeyDatabase): HashMap<String, Any> {
+        val resourceFiles = HashMap<String, Any>(keyDatabase.getEntries().size)
+        for (keyEntry in keyDatabase.getEntries()) {
+            val name = keyEntry.fileName.lowercase()
+            val sep = name.lastIndexOf('.')
+            if (sep > 0 && name.substring(sep) in resourceExtensions) {
+                resourceFiles[name] = keyEntry
+            }
+        }
+        return resourceFiles
+    }
+
     private fun processOverrides(environment: AppEnvironment, dirFile: File) {
         val files = dirFile.listFiles()
         for (file in files) {
@@ -178,11 +181,8 @@ object Main {
             } else {
                 val name = file.getName().lowercase()
                 val sep = name.lastIndexOf('.')
-                if (sep > 0) {
-                    val ext = name.substring(sep)
-                    if (ext == ".2da" || ext == ".uti") {
-                        environment.resourceFiles[name] = file
-                    }
+                if (sep > 0 && name.substring(sep) in resourceExtensions) {
+                    environment.resourceFiles[name] = file
                 }
             }
         }

@@ -49,8 +49,7 @@ class LoadTemplates(private val progressDialog: ProgressDialog, private val envi
                     if (itemName.isNotEmpty() && itemDescription.isNotEmpty()) {
                         val resourceElement = DBElement(11, 0, "TemplateResRef", resourceName)
                         fieldList.setElement("TemplateResRef", resourceElement)
-                        val itemTemplate = ItemTemplate(fieldList)
-                        environment.itemTemplates.add(itemTemplate)
+                        environment.itemTemplates.add(ItemTemplate(fieldList))
                     }
                 }
 
@@ -62,6 +61,7 @@ class LoadTemplates(private val progressDialog: ProgressDialog, private val envi
                 }
             }
 
+            environment.icons.primeTemplates(environment.itemTemplates)
             this.success = true
         } catch (exc: DBException) {
             Main.logException("Database error while loading inventory templates", exc)

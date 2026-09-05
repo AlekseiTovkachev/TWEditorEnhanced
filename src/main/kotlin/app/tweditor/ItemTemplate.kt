@@ -4,11 +4,13 @@ class ItemTemplate(val fieldList: DBList) : Comparable<ItemTemplate> {
     val baseItem: Int
     val itemName: String
     val resourceName: String
+    val iconResref: String?
 
     init {
         this.baseItem = fieldList.getInteger("BaseItem")
         this.itemName = fieldList.getString("LocalizedName")
         this.resourceName = fieldList.getString("TemplateResRef")
+        this.iconResref = fieldList.environment.icons.itemIconResref(fieldList)
     }
 
     override fun equals(other: Any?): Boolean {

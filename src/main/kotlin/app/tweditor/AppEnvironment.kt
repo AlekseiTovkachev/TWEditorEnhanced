@@ -17,6 +17,7 @@ class AppEnvironment {
     var languageID: Int = -1
     var resourceFiles: MutableMap<String, Any> = HashMap()
     var itemTemplates: MutableList<ItemTemplate> = ArrayList()
+    val icons: IconLibrary by lazy { IconLibrary(this) }
 
     fun getString(stringRef: Int): String = stringsDatabase!!.getString(stringRef)
 

@@ -21,17 +21,22 @@ class SignsPanel(private val session: GameSession, private val environment: AppE
         val rows = fieldNames[0].size
         val cols = fieldNames[0][0].size
         fields = Array(tabs) { Array(rows) { arrayOfNulls(cols) } }
+        val abilityLabels = ArrayList<String>()
         for (tab in 0 until tabs) {
             val panel = JPanel(GridLayout(0, cols, 5, 5))
             for (row in 0 until rows) {
                 for (col in 0 until cols) {
                     if (fieldNames[tab][row][col].isNotEmpty()) {
-                        val field = JCheckBox(fieldNames[tab][row][col])
+                        val name = fieldNames[tab][row][col]
+                        val abilityLabel = databaseLabels[tab][row][col]
+                        val field = JCheckBox(name)
+                        field.icon = environment.icons.abilityIcon(abilityLabel, ABILITY_ICON_SIZE)
                         field.actionCommand = Integer.toString(tab * 100 + row * 10 + col)
                         field.addActionListener(this)
                         this.fields[tab][row][col] = field
                         panel.add(field)
-                        labelMap[databaseLabels[tab][row][col]] = field
+                        labelMap[abilityLabel] = field
+                        abilityLabels.add(abilityLabel)
                     } else {
                         panel.add(JLabel())
                     }
@@ -41,6 +46,7 @@ class SignsPanel(private val session: GameSession, private val environment: AppE
             tabbedPane.addTab(tabNames[tab], panel)
         }
 
+        environment.icons.primeAbilities(abilityLabels)
         add(tabbedPane)
     }
 
@@ -237,6 +243,8 @@ class SignsPanel(private val session: GameSession, private val environment: AppE
     }
 
     companion object {
+        private const val ABILITY_ICON_SIZE = 18
+
         private val tabNames = arrayOf("Aard", "Igni", "Quen", "Axii", "Yrden")
 
         private val fieldNames = arrayOf(
@@ -256,5 +264,9 @@ class SignsPanel(private val session: GameSession, private val environment: AppE
         )
 
         private val associatedSpells = intArrayOf(0, 3, 1, 4, 2)
+
+        /** The ability names the panel's checkboxes represent, for icon priming and tests. */
+        fun abilityLabels(): List<String> =
+            databaseLabels.flatMap { tab -> tab.flatMap { row -> row.filter { it.isNotEmpty() } } }
     }
 }

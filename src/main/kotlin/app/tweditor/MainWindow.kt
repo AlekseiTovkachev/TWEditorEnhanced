@@ -57,6 +57,8 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
     val difficultyPanel = DifficultyPanel(session, environment)
 
     init {
+        environment.icons.lateIconListener = Runnable { this.repaint() }
+
         defaultCloseOperation = DISPOSE_ON_CLOSE
 
         var propValue = environment.properties.getProperty("window.main.position")

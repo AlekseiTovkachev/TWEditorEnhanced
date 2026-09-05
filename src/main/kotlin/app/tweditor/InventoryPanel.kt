@@ -43,6 +43,8 @@ class InventoryPanel(private val session: GameSession, private val environment: 
         itemsField.selectionMode = 0
         itemsField.visibleRowCount = 20
         itemsField.prototypeCellValue = InventoryItem("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm", DBElement(14, 0, "", DBList(environment, 0)))
+        itemsField.cellRenderer = ItemListCellRenderer(environment, ICON_SIZE)
+        itemsField.fixedCellHeight = ICON_SIZE + 10
         var scrollPane = JScrollPane(itemsField)
         val preferredSize: Dimension = scrollPane.preferredSize
 
@@ -71,6 +73,8 @@ class InventoryPanel(private val session: GameSession, private val environment: 
         selectionModel.selectionMode = 1
 
         availField.selectionModel = selectionModel
+        availField.cellRenderer = ItemTreeCellRenderer(environment, ICON_SIZE)
+        availField.rowHeight = ICON_SIZE + 6
         scrollPane = JScrollPane(availField)
         scrollPane.preferredSize = preferredSize
 
@@ -447,6 +451,7 @@ class InventoryPanel(private val session: GameSession, private val environment: 
     }
 
     companion object {
+        private const val ICON_SIZE = 32
         private val categories = arrayOf("Bomb", "Book", "Drink", "Food", "Gem", "Grease", "Ingredient", "Jewelry", "Magical", "Potion", "Quest", "Upgrade", "Other")
         private const val TAB_BOMB = 0
         private const val TAB_BOOK = 1
