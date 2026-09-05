@@ -19,7 +19,7 @@ A named file stored inside a Save archive (module data, player blueprint, quest 
 _Avoid_: resource (reserved for game installation data), item
 
 **Module**:
-The in-save container describing the current game session — the session's state, the player list, and the quest database reference. The editor's Stats/Attributes/Signs/Styles/Equipment/Inventory/Difficulty tabs all read from the player record inside it.
+The in-save container describing the current game session — the session's state, the player list, and the quest database reference. The editor's Stats/Attributes/Signs/Styles/Equipment/Inventory/Difficulty tabs all read from the player record inside it; Quests and Knowledge read the quest database it points at; Storage reads the shared innkeeper chest in the .smm meta database; Statistics reads across all of them.
 _Avoid_: mod
 
 **Player record**:

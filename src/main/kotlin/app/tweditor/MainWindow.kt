@@ -655,7 +655,7 @@ class MainWindow(val environment: AppEnvironment) : JFrame("The Witcher Save Edi
 
     private fun aboutProgram() {
         val info = StringBuilder(256)
-        info.append("<html>The Witcher Save Editor Version 3.0.1<br>")
+        info.append("<html>The Witcher Save Editor Version " + BuildInfo.VERSION + "<br>")
 
         info.append("<br>User name: ")
         info.append(System.getProperty("user.name"))

@@ -4,7 +4,7 @@ TWEditor - Version 4.1.0-SNAPSHOT
 Overview
 ========
 
-TWEditor allows you to modify save games created by The Witcher.  You can modify the attributes and abilities of the player character (Geralt). You can also unpack all of the files in the save, manually modify one or more of the files, and then repack the save.  Note that you can not add files to the save or delete files from the save.
+TWEditor allows you to modify save games created by The Witcher.  You can modify the attributes and abilities of the player character (Geralt), the items he carries, wears and stores, and the journal knowledge he has collected.  Edits stay in memory until you save; the Apply/Revert commands let you commit or discard the current edits without touching the file, Save As writes a copy under a new name, and a backup of the save is taken before the first write of each session.
 
 The 'Stats' tab allows you to modify selected fields in the save game such as experience, orens and talents.  The modified values will be written when the file is saved.  Whether or not the changes are accepted when the save is loaded depends on the game engine.
 
@@ -14,11 +14,17 @@ The 'Signs' tab allows you to modify Aard, Igni, Quen, Axii and Yrden selections
 
 The 'Styles' tab allows you to modify Steel Sword and Silver Sword selections.
 
-The 'Equipment' tab allows you to modify Geralt's equipped items and trophy.
+The 'Equipment' tab shows the paperdoll of equipped items, grouped by weapon slot: add items from a template tree into matching slots, move or remove them, and edit them in place.
 
 The 'Inventory' tab allows you to modify Geralt's inventory.
 
+The 'Storage' tab reads the innkeeper storage chest shared by every innkeeper in the save: store items from a template tree, remove, sort, examine and edit them.
+
 The 'Quests' tab shows the game quests (Started, Completed, Failed and Not Started).  The 'Examine' button will display a description of the current quest stage (if the stage has a description).
+
+The 'Knowledge' tab shows the journal knowledge the save holds (bestiary, characters, places, recipes, ingredients, glossary); ticked entries are written into the save on the next save.
+
+The 'Statistics' tab is a read-only record of what Geralt has been doing: kills and top opponents, quests touched per act, and the journal activity timeline in in-game time.
 
 The 'Difficulty' tab allows you to modify difficulty level.
 
@@ -123,3 +129,16 @@ Version 4.0.0
 =============
 The JAR can now be started with `java -jar` / `javaw -jar` (Main-Class manifest attribute).
 Build modernized to Gradle 9; the Windows launcher (launch4j) and Mac DMG packaging are removed and will be replaced by jpackage.
+
+Version 4.1.0
+=============
+Self-contained Windows build via jpackage (module-trimmed Java 25 runtime, no Java installation required).
+FlatLaf theming with follow-OS light/dark mode.
+Save browser with embedded screenshots, level and save info.
+Item/ability icons resolved from the game archives (TGA/DDS).
+Per-instance item editing: weapon ability lists, appearance, quality, price.
+Equipment paperdoll by weapon slot and the innkeeper storage chest tab.
+Knowledge/Journal panel: bestiary, books/lore, alchemy knowledge, with journal entry editing.
+Read-only Statistics tab: kills, quests per act, journal timeline.
+Draft workflow: Apply commits the current edits, Revert discards them back to the last applied/saved state, Save As writes a renamed copy, and validation gates run at Apply/Save time.
+A backup of the save is taken before its first write each session (File > Restore Backup).
