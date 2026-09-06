@@ -1,0 +1,7 @@
+# Replace Swing with Compose Desktop
+
+The 4.1 UI polish kept Swing to minimize migration risk, but the completed editor now needs a cohesive Windows-first redesign and the owner accepts a full presentation-layer rewrite. We will replace Swing and FlatLaf with Compose Desktop: its declarative Kotlin model is a deliberate learning benefit, its layout system fits the required resizing and display scaling, and it provides a coherent foundation for a restrained Witcher-inspired design. Standard Material 3 components will supply the basic controls under a custom design system; only game-specific navigation and item surfaces will be custom-built. The GUI-free Save Seam and existing editing capabilities remain outside the rewrite boundary.
+
+**Considered options:** Retaining Swing with a stronger design system was the lowest-risk product choice, but would preserve an imperative UI model the owner does not want to invest in. JavaFX is mature, but offers no decisive product or learning advantage over Compose for this Kotlin codebase.
+
+**Consequences:** The complete window, panels, dialogs, interaction tests, and packaging configuration must be replaced or adapted. Save behavior must first be locked behind deterministic command-level write/reload tests; the rewrite may change navigation and presentation but not Save semantics. Development cuts over linearly to Compose and removes Swing and FlatLaf rather than maintaining two shipped interfaces.
