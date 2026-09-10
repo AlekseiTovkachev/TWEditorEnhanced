@@ -1,0 +1,7 @@
+2DA V2.0
+
+	id	name              	codepage	phonemeSet	FallBack         	FallBackInfo	Fonts   	Charset	StrRef
+0	0 	Debug            	1252   	enPhonemes	****            	0          	****   	****  	****
+3	3 	FinalEnglish_Short	1252   	enPhonemes	FinalEnglish    	0          	****   	****  	2665
+4	5 	Polish           	1250   	enPhonemes	Debug           	0          	****   	****  	2666
+9	14	Russian          	1251   	enPhonemes	FinalEnglish_Short	0          	fonts_rus	**** 	2671

@@ -12,4 +12,4 @@ The editor previously showed every game-content string (item/quest/journal names
 
 - Command-layer user-facing messages must move from built English strings to message keys + args (the Seam stays GUI-free — keys are data), which is the bulk of the refactor cost.
 - Hundreds of shell strings get extracted to `Messages.properties` / `Messages_ru.properties`; the Russian wording reuses the official base-game vocabulary established by the Sword Stats Rebalance localization work.
-- Adding a later language (Polish, German, …) is a new `Messages_xx.properties` plus vetting — no code change.
+- Adding a later language (Polish, German, …) is a new `Messages_xx.properties`, one locale entry in `EditorMessages.SHELL_TRANSLATIONS` (the id→locale map), and vetting — the shell reads translations only through the bundle, so no other code changes.
