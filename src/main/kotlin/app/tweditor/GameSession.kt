@@ -3,6 +3,7 @@ package app.tweditor
 import java.io.File
 
 class GameSession(tmpDir: File) {
+    private val tempDirectory = tmpDir
     val smmFile: File = File(tmpDir, "TWEditor.smm")
     val databaseFile: File = File(tmpDir, "TWEditor.ifo")
     val modFile: File = File(tmpDir, "TWEditor.mod")
@@ -23,6 +24,7 @@ class GameSession(tmpDir: File) {
     private var smmName: String? = null
     private var modName: String? = null
     private var playerName: String? = null
+    private var moduleOwnership = SaveModuleOwnership(null, emptyList())
     private var quests: MutableList<Quest>? = null
     private var dataModified = false
     private var dataChanging = false
@@ -42,6 +44,11 @@ class GameSession(tmpDir: File) {
         this.modName = modName
     }
 
+    fun getModuleOwnership(): SaveModuleOwnership = moduleOwnership
+    fun setModuleOwnership(moduleOwnership: SaveModuleOwnership) {
+        this.moduleOwnership = moduleOwnership
+    }
+
     fun getPlayerName(): String? = playerName
     fun setPlayerName(playerName: String?) {
         this.playerName = playerName
@@ -58,6 +65,12 @@ class GameSession(tmpDir: File) {
         this.draftDirty = dataModified
     }
 
+    /** Restores the two edit flags captured by an editor-command history entry. */
+    fun restoreEditState(dataModified: Boolean, draftDirty: Boolean) {
+        this.dataModified = dataModified
+        this.draftDirty = draftDirty
+    }
+
     fun isDraftDirty(): Boolean = draftDirty
 
     fun createBaseline() {
@@ -65,8 +78,17 @@ class GameSession(tmpDir: File) {
         val playerTop = playerDatabase?.getTopLevelStruct()
         val smmTop = smmDatabase?.getTopLevelStruct()
         val qdbTop = questDatabase?.getTopLevelStruct()
+        val baselineDataModified = this.dataModified
         baseline = if (ifoTop != null && playerTop != null && smmTop != null) {
-            SessionBaseline(ifoTop.clone(), playerTop.clone(), smmTop.clone(), qdbTop?.clone(), journalDirty)
+            SessionBaseline(
+                ifoTop.clone(),
+                playerTop.clone(),
+                smmTop.clone(),
+                qdbTop?.clone(),
+                quests.orEmpty().map { it.snapshot() },
+                journalDirty,
+                baselineDataModified
+            )
         } else {
             null
         }
@@ -88,14 +110,18 @@ class GameSession(tmpDir: File) {
             questDatabase.setTopLevelStruct(snapshot.qdbTop.clone())
             setJournalData(JournalData(questDatabase.getTopLevelStruct()!!.getValue() as DBList))
         }
+        val questsByName = quests.orEmpty().associateBy { it.getResourceName() }
+        for (questSnapshot in snapshot.questSnapshots) {
+            questsByName[questSnapshot.resourceName]?.restore(questSnapshot)
+        }
         this.journalDirty = snapshot.journalDirty
-        this.dataModified = false
+        this.dataModified = snapshot.dataModified
         this.draftDirty = false
         return true
     }
 
-    fun runValidation(): List<String> {
-        val problems = ArrayList<String>()
+    fun runValidation(): List<LocalizedText> {
+        val problems = ArrayList<LocalizedText>()
         for (gate in validationGates) {
             problems.addAll(gate.validate(this))
         }
@@ -124,7 +150,7 @@ class GameSession(tmpDir: File) {
 
     fun isJournalDirty(): Boolean = journalDirty
 
-    fun addJournalEntry(category: String, entryId: String) {
+    fun addJournalEntry(category: String, entryId: String, entryTod: Int = 0) {
         val questDatabase = requireNotNull(this.questDatabase) { "No quest database is open" }
         val topList = questDatabase.getTopLevelStruct()!!.getValue() as DBList
         var journalElement = topList.getElement("Journal")
@@ -146,9 +172,28 @@ class GameSession(tmpDir: File) {
         }
         val fields = newElement.getValue() as DBList
         fields.setString("Entry", category + ":" + entryId)
+        fields.setInteger("EntryCD", 0, DBElement.DWORD)
+        fields.setInteger("EntryTOD", entryTod, DBElement.DWORD)
         fields.setInteger("EntryRead", 0)
         journalList.addElement(newElement)
         refreshJournal(topList)
+    }
+
+    /** Runs a command-owned mutation against the Journal and refreshes its immutable view. */
+    internal fun mutateJournal(mutator: (DBList) -> Unit) {
+        val questDatabase = requireNotNull(this.questDatabase) { "No quest database is open" }
+        val topList = questDatabase.getTopLevelStruct()!!.getValue() as DBList
+        mutator(topList)
+        refreshJournal(topList)
+    }
+
+    /** Restores a command snapshot without exposing raw journal structures to the UI. */
+    internal fun restoreJournalSnapshot(topLevel: DBElement, journalDirty: Boolean) {
+        val database = requireNotNull(questDatabase) { "No quest database is open" }
+        database.setTopLevelStruct(topLevel.clone())
+        val topList = database.getTopLevelStruct()!!.getValue() as DBList
+        setJournalData(JournalData(topList))
+        this.journalDirty = journalDirty
     }
 
     fun removeJournalEntries(entries: Collection<JournalEntry>) {
@@ -187,11 +232,23 @@ class GameSession(tmpDir: File) {
 
     fun writeSave() {
         val saveDatabase = requireNotNull(this.saveDatabase) { "No save file is open" }
+        writeModifiedQuests()
         if (!saveBackedUp) {
             saveBackup().createBackup()
             this.saveBackedUp = true
         }
         saveDatabase.save()
+        quests.orEmpty().forEach { it.setModified(false) }
+    }
+
+    private fun writeModifiedQuests() {
+        val saveDatabase = requireNotNull(this.saveDatabase) { "No save file is open" }
+        for ((index, quest) in quests.orEmpty().withIndex()) {
+            if (!quest.isModified()) continue
+            val qstFile = File(tempDirectory, "TWEditor-quest-$index.qst")
+            quest.saveTo(qstFile)
+            saveDatabase.addEntry(quest.getResourceName() + ".qst", qstFile)
+        }
     }
 
     fun hasSaveBackup(): Boolean {
@@ -211,9 +268,11 @@ class GameSession(tmpDir: File) {
         this.database = null
         this.modDatabase = null
         this.saveDatabase = null
+        this.quests = null
         this.journalData = null
         this.questDatabase = null
         this.questDBName = null
+        this.moduleOwnership = SaveModuleOwnership(null, emptyList())
         this.journalDirty = false
         this.dataModified = false
         this.draftDirty = false
@@ -227,5 +286,7 @@ private class SessionBaseline(
     val playerTop: DBElement,
     val smmTop: DBElement,
     val qdbTop: DBElement?,
-    val journalDirty: Boolean
+    val questSnapshots: List<QuestSnapshot>,
+    val journalDirty: Boolean,
+    val dataModified: Boolean
 )

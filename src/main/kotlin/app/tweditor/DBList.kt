@@ -105,7 +105,7 @@ class DBList(val environment: AppEnvironment, capacity: Int) : DBElementValue(),
     override fun iterator(): Iterator<DBElement> = elementList.iterator()
 
     @Throws(DBException::class)
-    fun getString(label: String): String {
+    fun getString(label: String, preferredModule: String? = null): String {
         val element = getElement(label)
         val value: String
         if (element != null) {
@@ -115,16 +115,18 @@ class DBList(val environment: AppEnvironment, capacity: Int) : DBElementValue(),
                 12 -> {
                     val string = element.getValue() as LocalizedString
                     if (string.getSubstringCount() > 0) {
+                        // Display fallback chain: the active language, then the
+                        // English substring so gaps stay readable. The write
+                        // path (setString) stays slot-exact; fallback text is
+                        // never persisted.
                         val substring = string.getSubstring(environment.languageID, 0)
-                        if (substring != null) {
-                            substring.string
-                        } else {
-                            string.getSubstring(0).string
-                        }
+                            ?: string.getSubstring(LanguageCatalog.ENGLISH_LANGUAGE_ID, 0)
+                            ?: string.getSubstring(0)
+                        substring.string
                     } else {
                         val refid = string.stringReference
                         if (refid >= 0) {
-                            environment.getString(refid)
+                            environment.getString(refid, preferredModule)
                         } else {
                             ""
                         }

@@ -36,10 +36,8 @@ class SaveBackupTest {
 
         val repacked = SaveDatabase(environment, save)
         repacked.load()
-        val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
         val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!)
-        assertTrue(allowedToChange.containsAll(rewritten),
-            "entries outside the module .sav container, player.utc and the .smm file changed: " + rewritten)
+        SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
         val reloaded = SaveSeamSupport.load(environment, save, tempDir)
         assertEquals(500, reloaded.player!!.getInteger("Gold"),

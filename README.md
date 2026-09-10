@@ -4,34 +4,20 @@ TWEditor - Version 4.1.0-SNAPSHOT
 Overview
 ========
 
-TWEditor allows you to modify save games created by The Witcher.  You can modify the attributes and abilities of the player character (Geralt), the items he carries, wears and stores, and the journal knowledge he has collected.  Edits stay in memory until you save; the Apply/Revert commands let you commit or discard the current edits without touching the file, Save As writes a copy under a new name, and a backup of the save is taken before the first write of each session.
+TWEditor allows you to modify save games created by The Witcher. You can edit Geralt's hero state, equipment, carried and stored items, and journal knowledge. Edits stay in memory until you save; Apply/Revert let you commit or discard the current draft without touching the file, Save As writes a copy under a new name, and a backup is taken before the first write of each session.
 
-The 'Stats' tab allows you to modify selected fields in the save game such as experience, orens and talents.  The modified values will be written when the file is saved.  Whether or not the changes are accepted when the save is loaded depends on the game engine.
+The shipped desktop UI has three Compose workspaces:
 
-The 'Attributes' tab allows you to modify Strength, Dexterity, Stamina and Intelligence selections.
+- **Hero** edits the level summary, difficulty, attributes, Signs, and combat styles.
+- **Journal** shows quests, bestiary, characters, locations, formulas, ingredients, glossary, and tutorials. Advanced Journal Editing makes the intentionally risky raw edits explicit.
+- **Inventory** combines the 12 supported equipment destinations, Satchel, Alchemy Sack, Quest Items, and the shared non-spatial Storage chest. Add, edit, remove, sort, selection, and compatible drag/drop actions use the same command and Save workflow.
 
-The 'Signs' tab allows you to modify Aard, Igni, Quen, Axii and Yrden selections.
-
-The 'Styles' tab allows you to modify Steel Sword and Silver Sword selections.
-
-The 'Equipment' tab shows the paperdoll of equipped items, grouped by weapon slot: add items from a template tree into matching slots, move or remove them, and edit them in place.
-
-The 'Inventory' tab allows you to modify Geralt's inventory.
-
-The 'Storage' tab reads the innkeeper storage chest shared by every innkeeper in the save: store items from a template tree, remove, sort, examine and edit them.
-
-The 'Quests' tab shows the game quests (Started, Completed, Failed and Not Started).  The 'Examine' button will display a description of the current quest stage (if the stage has a description).
-
-The 'Knowledge' tab shows the journal knowledge the save holds (bestiary, characters, places, recipes, ingredients, glossary); ticked entries are written into the save on the next save.
-
-The 'Statistics' tab is a read-only record of what Geralt has been doing: kills and top opponents, quests touched per act, and the journal activity timeline in in-game time.
-
-The 'Difficulty' tab allows you to modify difficulty level.
+Statistics remains implemented as a read-only data calculation but is intentionally hidden from navigation until it has a dedicated presentation.
 
 Installation
 ============
 
-The easiest way to run the editor is the self-contained Windows build: unzip `TWEditor-win-<version>.zip` (built with `gradlew packageWindowsAppImage`) and double-click `TWEditor.exe`.  No Java installation is required — a module-trimmed Java 25 runtime is bundled with the app.
+The easiest way to run the editor is the self-contained Windows app image: run `gradlew packageWindowsAppImage`, then double-click `build/app-image/TWEditor/TWEditor.exe`. No Java installation is required — the Compose Desktop distribution bundles its runtime.
 
 Alternatively, the cross-platform JAR build works on any platform as described below.
 
@@ -57,14 +43,14 @@ The language identifier is determined by scanning the windows registry.  If this
 
 The game data directory is assumed to be `The Witcher` in the user documents folder (*My Documents* on an English-language system).  If the save games are located in another directory, you can specify the game data directory when starting the editor.  This is done by specifying `-DTW.data.path="<path>"` on the java command line where <path> is directory containing the game data.  For example, if the user login is `Ronald Hoffman`, the normal game data directory would be `C:\Documents and Settings\Ronald Hoffman\My Documents\The Witcher`.
 
-The Java runtime will sometimes throws a null pointer exception when adding the shell folders to the file chooser dialog (JFileChooser).  If this happens, you can disable the shell folders by specifying `-DUseShellFolder=0` on the java command line.
+Open and Save As use the operating system's native file dialog. The Compose overwrite confirmation remains inside the application so file replacement is explicit.
 
 Development
 ===========
 
-Build and test with `gradlew build` (Gradle 9, Kotlin DSL, version catalog in `gradle/libs.versions.toml`).  A Java 25 toolchain (Temurin) is downloaded automatically on the first build via the Foojay resolver, so no specific JDK needs to be installed.
+Build and test with `gradlew build` (Gradle 9, Kotlin DSL, version catalog in `gradle/libs.versions.toml`). The UI is Compose Desktop with Material 3; a Java 25 toolchain (Temurin) is downloaded automatically on the first build via the Foojay resolver, so no specific JDK needs to be installed. `gradlew coverageReport` writes report-only Kover HTML/XML coverage; it has no arbitrary global threshold.
 
-The test suite contains golden-file tests around the save-database layer.  The primary fixture is a real tutorial save committed under `src/test/resources/saves/`.  Additional local saves are picked up from the gitignored `.local-saves/` directory in the project root: drop any number of `*.TheWitcherSave` files there and the suite round-trips them (files are loaded, re-saved, and compared; they are never modified in place beyond the round-trip and are never committed).  When that directory is absent or empty, the local-save tests are skipped so fresh clones and CI stay green.
+The release-gating test suite contains golden-file tests around the save-database layer.  Representative early-game, storage, and equipment fixtures are committed under `src/test/resources/saves/`; tests load working copies and never mutate those resources.  Broader probes against owner-installed game resources and the gitignored `.local-saves/` directory are tagged `local` and are deliberately excluded from `gradlew test`; run them explicitly with `gradlew localSaveTest` when those prerequisites are available.
 
 ScripterRon - Ronald.Hoffman6@gmail.com
 
@@ -133,12 +119,12 @@ Build modernized to Gradle 9; the Windows launcher (launch4j) and Mac DMG packag
 Version 4.1.0
 =============
 Self-contained Windows build via jpackage (module-trimmed Java 25 runtime, no Java installation required).
-FlatLaf theming with follow-OS light/dark mode.
+Compose Desktop presentation with a custom dark, warm color system.
 Save browser with embedded screenshots, level and save info.
 Item/ability icons resolved from the game archives (TGA/DDS).
 Per-instance item editing: weapon ability lists, appearance, quality, price.
-Equipment paperdoll by weapon slot and the innkeeper storage chest tab.
-Knowledge/Journal panel: bestiary, books/lore, alchemy knowledge, with journal entry editing.
-Read-only Statistics tab: kills, quests per act, journal timeline.
+Three Compose workspaces: Hero, Journal, and Inventory, with the accepted equipment paperdoll and innkeeper storage model.
+Journal knowledge and quest editing with an explicit Advanced Journal Editing boundary.
+Read-only Statistics computation retained but hidden from navigation.
 Draft workflow: Apply commits the current edits, Revert discards them back to the last applied/saved state, Save As writes a renamed copy, and validation gates run at Apply/Save time.
 A backup of the save is taken before its first write each session (File > Restore Backup).

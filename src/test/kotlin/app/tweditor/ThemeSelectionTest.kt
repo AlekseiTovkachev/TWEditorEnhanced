@@ -1,26 +1,9 @@
 package app.tweditor
 
-import com.formdev.flatlaf.FlatDarkLaf
-import com.formdev.flatlaf.FlatLaf
-import com.formdev.flatlaf.FlatLightLaf
-import javax.swing.UIManager
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 
 class ThemeSelectionTest {
-
-    @Test
-    fun darkPreferencePicksTheDarkTheme() {
-        assertTrue(ThemeSelection.lookAndFeel(ThemeSelection.Preference.DARK) is FlatDarkLaf)
-    }
-
-    @Test
-    fun lightAndUnknownPreferencesPickTheLightTheme() {
-        assertTrue(ThemeSelection.lookAndFeel(ThemeSelection.Preference.LIGHT) is FlatLightLaf)
-        assertTrue(ThemeSelection.lookAndFeel(ThemeSelection.Preference.UNKNOWN) is FlatLightLaf)
-    }
-
     @Test
     fun windowsRegistryLightValueParsesToLight() {
         assertEquals(ThemeSelection.Preference.LIGHT,
@@ -76,17 +59,4 @@ class ThemeSelectionTest {
         assertEquals(ThemeSelection.Preference.UNKNOWN, ThemeSelection.fromGsettingsOutput("'something-else'"))
     }
 
-    @Test
-    fun globalDefaultsCarryTheAccentColor() {
-        assertEquals("#B45309", ThemeSelection.globalExtraDefaults()["@accentColor"])
-        assertEquals(1, ThemeSelection.globalExtraDefaults().size)
-    }
-
-    @Test
-    fun installAppliesTheAccentAndAFollowOsTheme() {
-        ThemeSelection.install()
-        assertEquals("#B45309", FlatLaf.getGlobalExtraDefaults()["@accentColor"])
-        val lafClass = UIManager.getLookAndFeel().javaClass.getName()
-        assertTrue(lafClass == "com.formdev.flatlaf.FlatLightLaf" || lafClass == "com.formdev.flatlaf.FlatDarkLaf")
-    }
 }

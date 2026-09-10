@@ -61,13 +61,13 @@ class DraftWorkflowTest {
         assertTrue(session.runValidation().isEmpty(), "no gates registered yet")
 
         val gates = session.validationGates
-        gates.add { assertThatGoldIsNotNegative(it) }
+        gates.add { session -> assertThatGoldIsNotNegative(session) }
         playerListOf(loaded).setInteger("Gold", 500)
         assertTrue(session.runValidation().isEmpty())
 
         playerListOf(loaded).setInteger("Gold", -1)
         val problems = session.runValidation()
-        assertEquals(listOf("Gold must not be negative"), problems)
+        assertEquals(listOf("test.goldNotNegative"), problems.map { it.key })
 
         gates.clear()
         assertTrue(session.runValidation().isEmpty())
@@ -116,18 +116,9 @@ class DraftWorkflowTest {
             else -> name
         }
         val beforeNormalized = originalDigests.entries.associate { targetKey(it.key) to it.value }
-        assertEquals(beforeNormalized.keys, targetDigests.keys)
-        val rewritten = SaveSeamSupport.changedEntries(beforeNormalized, targetDigests)
         val allowedToChange = setOf(reloaded.modName!!, "player.utc", reloaded.smmName!!,
             reloaded.questDBName!! + ".qdb")
-        assertTrue(allowedToChange.containsAll(rewritten),
-            "entries beyond the edited set changed: " + rewritten)
-        for (name in beforeNormalized.keys) {
-            if (!rewritten.contains(name)) {
-                assertEquals(beforeNormalized[name], targetDigests[name],
-                    "untouched entry " + name + " must be byte-identical")
-            }
-        }
+        SaveSeamSupport.assertUntouchedEntries(beforeNormalized, targetDigests, allowedToChange)
     }
 
     private fun playerListOf(loaded: SaveSeamSupport.Loaded): DBList {
@@ -136,11 +127,15 @@ class DraftWorkflowTest {
         return playerList.getElement(0).getValue() as DBList
     }
 
-    private fun assertThatGoldIsNotNegative(session: GameSession): List<String> {
+    private fun assertThatGoldIsNotNegative(session: GameSession): List<LocalizedText> {
         val topList = session.database!!.getTopLevelStruct()!!.getValue() as DBList
         val playerList = topList.getElement("Mod_PlayerList")!!.getValue() as DBList
         val player = playerList.getElement(0).getValue() as DBList
-        return if (player.getInteger("Gold") < 0) listOf("Gold must not be negative") else emptyList()
+        return if (player.getInteger("Gold") < 0) {
+            listOf(LocalizedText("test.goldNotNegative"))
+        } else {
+            emptyList()
+        }
     }
 
     companion object {

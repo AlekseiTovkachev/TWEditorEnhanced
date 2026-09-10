@@ -6,6 +6,7 @@ rootProject.name = "TWEditorEnhanced"
 
 dependencyResolutionManagement {
     repositories {
+        google()
         mavenCentral()
     }
 }

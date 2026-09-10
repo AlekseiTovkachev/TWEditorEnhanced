@@ -1,42 +1,19 @@
 package app.tweditor
 
-import com.formdev.flatlaf.FlatDarkLaf
-import com.formdev.flatlaf.FlatLaf
-import com.formdev.flatlaf.FlatLightLaf
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.NoSuchElementException
 import java.util.Scanner
-import javax.swing.LookAndFeel
-import javax.swing.UIManager
 
+/**
+ * Reads the operating-system theme preference for the Compose color scheme.
+ * Presentation is owned by Compose; this object deliberately has no
+ * look-and-feel or toolkit installation side effects.
+ */
 object ThemeSelection {
-    const val ACCENT_COLOR = "#B45309"
-
     enum class Preference {
         LIGHT, DARK, UNKNOWN
     }
-
-    fun globalExtraDefaults(): Map<String, String> = mapOf("@accentColor" to ACCENT_COLOR)
-
-    fun install() {
-        install(detectOsPreference())
-    }
-
-    fun install(preference: Preference) {
-        FlatLaf.setGlobalExtraDefaults(globalExtraDefaults())
-        try {
-            UIManager.setLookAndFeel(lookAndFeel(preference))
-        } catch (exc: Exception) {
-            throw RuntimeException("Unable to install the FlatLaf look-and-feel", exc)
-        }
-    }
-
-    fun lookAndFeel(preference: Preference): LookAndFeel {
-        return if (preference == Preference.DARK) FlatDarkLaf() else FlatLightLaf()
-    }
-
-    fun lookAndFeelForOs(): LookAndFeel = lookAndFeel(detectOsPreference())
 
     fun detectOsPreference(): Preference {
         val os = System.getProperty("os.name", "").lowercase()

@@ -2,6 +2,7 @@ package app.tweditor
 
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -10,6 +11,7 @@ import java.nio.file.Path
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 
+@Tag("local")
 class LocalSavesRoundTripTest {
     @Test
     fun localSavesRoundTripWithIdenticalFacts(@TempDir tempDir: Path) {
@@ -30,10 +32,8 @@ class LocalSavesRoundTripTest {
             val after = SaveSeamSupport.entryDigests(loaded.saveDatabase!!)
 
             assertEquals(before.keys, after.keys, save.getName())
-            val rewritten = SaveSeamSupport.changedEntries(before, after)
             val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!)
-            assertTrue(allowedToChange.containsAll(rewritten),
-                save.getName() + ": entries outside the module .sav container, player.utc and the .smm file changed: " + rewritten)
+            SaveSeamSupport.assertUntouchedEntries(before, after, allowedToChange)
 
             val reloaded = SaveSeamSupport.load(environment, save, workDir)
             assertEquals(questCount, reloaded.questCount, save.getName())

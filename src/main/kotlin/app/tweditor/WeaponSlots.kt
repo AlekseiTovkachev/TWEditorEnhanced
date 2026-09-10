@@ -75,19 +75,17 @@ object WeaponSlots {
     fun equipableSlots(environment: AppEnvironment): Map<Int, Int> {
         val masks = HashMap<Int, Int>(64)
         val resource = environment.resourceFiles["baseitems.2da"]
-        val input = when (resource) {
-            is java.io.File -> java.io.FileInputStream(resource)
-            is KeyEntry -> resource.getInputStream()
-            else -> null
-        }
+        val input = resource?.let(ResourceAccess::open)
         if (input != null) {
             try {
                 val table = TextDatabase(input)
                 for (row in 0 until table.getResourceCount()) {
                     val mask = table.getInteger(row, "EquipableSlots")
-                    if (mask != 0) {
-                        masks[row] = mask
-                    }
+                    // Zero is meaningful: this is a known base-item row that
+                    // cannot be equipped. Omitting it makes the picker treat
+                    // ordinary items as unknown/modded and offer them in every
+                    // Equipment destination.
+                    masks[row] = mask
                 }
             } finally {
                 input.close()

@@ -1,6 +1,7 @@
 package app.tweditor
 
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
@@ -28,10 +29,8 @@ class JournalEditTest {
 
         val repacked = SaveDatabase(environment, save)
         repacked.load()
-        val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
         val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!, loaded.questDBName + ".qdb")
-        assertTrue(allowedToChange.containsAll(rewritten),
-            "entries outside the module .sav container, player.utc, the .smm file and save.qdb changed: " + rewritten)
+        SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
         val reloaded = SaveSeamSupport.load(environment, save, tempDir)
         val added = reloaded.session.getJournalData()!!.entries.firstOrNull {
@@ -56,10 +55,8 @@ class JournalEditTest {
 
         val repacked = SaveDatabase(environment, save)
         repacked.load()
-        val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
         val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!, loaded.questDBName + ".qdb")
-        assertTrue(allowedToChange.containsAll(rewritten),
-            "entries outside the module .sav container, player.utc, the .smm file and save.qdb changed: " + rewritten)
+        SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
         val reloaded = SaveSeamSupport.load(environment, save, tempDir)
         assertTrue(reloaded.session.getJournalData()!!.entriesInCategory("tutorial").isEmpty(),
@@ -80,6 +77,7 @@ class JournalEditTest {
             "removal must match the entry id regardless of case")
     }
 
+    @Tag("local")
     @Test
     fun localSavesSurviveAggressiveJournalEditing(@TempDir tempDir: Path) {
         val savesDir = Path.of(System.getProperty("tweditor.localSaves", ".local-saves")).toFile()
@@ -104,9 +102,8 @@ class JournalEditTest {
 
             val repacked = SaveDatabase(environment, copy)
             repacked.load()
-            val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
             val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!, loaded.questDBName + ".qdb")
-            assertTrue(allowedToChange.containsAll(rewritten), save.name + ": unexpected entries changed: " + rewritten)
+            SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
             val reloaded = SaveSeamSupport.load(environment, copy, workDir)
             assertTrue(reloaded.session.getJournalData()!!.entries.any { it.entryId == "abigail/saved" },

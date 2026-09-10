@@ -3,7 +3,6 @@ package app.tweditor
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.util.Optional
@@ -11,11 +10,27 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import javax.swing.ImageIcon
-import javax.swing.SwingUtilities
-import javax.swing.Timer
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.roundToInt
+
+/**
+ * Database label ("Aard2 Upgrade1", "StyleSilverFast3", "Strength2 Upgrade2")
+ * -> `ui_ab_*` talent-tree icon resref. Signs and styles resolve through the
+ * [AbilityIcons] constants; attribute talents follow the same atlas naming.
+ */
+object AbilityResrefs {
+    fun resref(databaseLabel: String): String? {
+        AbilityIcons.iconResref(databaseLabel)?.let { return it }
+        val match = TALENT_LABEL.find(databaseLabel) ?: return null
+        return "ui_ab_" + match.groupValues[1].take(3).lowercase() +
+            match.groupValues[2] +
+            (if (match.groupValues[3].isEmpty()) "" else "u" + match.groupValues[3])
+    }
+
+    private val TALENT_LABEL = Regex("([A-Za-z]+)(\\d+)(?: Upgrade(\\d+))?$")
+}
 
 /**
  * Ability label -> `ui_ab_*` icon resref: the mapping spelled out by the string
@@ -89,8 +104,14 @@ class IconLibrary(private val environment: AppEnvironment) {
         lateIconListeners.add(listener)
     }
 
+    fun removeLateIconListener(listener: Runnable) {
+        lateIconListeners.remove(listener)
+    }
+
     private val images = ConcurrentHashMap<String, Optional<BufferedImage>>()
-    private val scaledIcons = ConcurrentHashMap<String, Optional<ImageIcon>>()
+    private val baseArchiveImages = ConcurrentHashMap<String, BufferedImage?>()
+    private val scaledIcons = ConcurrentHashMap<String, Optional<BufferedImage>>()
+    private val fullResolutionItemIcons = ConcurrentHashMap<String, BufferedImage>()
     private val resolutions = ConcurrentHashMap<String, Optional<String>>()
     private val baseItemClasses = ConcurrentHashMap<Int, BaseItem>()
     private val pending = ConcurrentHashMap.newKeySet<String>()
@@ -102,18 +123,50 @@ class IconLibrary(private val environment: AppEnvironment) {
     private val decodeExecutor: ExecutorService = Executors.newSingleThreadExecutor { runner ->
         Thread(runner, "icon-decoder").apply { isDaemon = true }
     }
+    private val repaintExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { runner ->
+        Thread(runner, "icon-repaint").apply { isDaemon = true }
+    }
 
-    fun itemIcon(fields: DBList): ImageIcon? {
+    fun itemIcon(fields: DBList): BufferedImage? {
         val resref = itemIconResref(fields) ?: return null
         return scaledItemIcon(resref, fields.getInteger("BaseItem"))
     }
 
-    fun templateIcon(template: ItemTemplate): ImageIcon? {
+    /**
+     * Item icon decoded for a view-facing record (BaseItem / ModelPart1 /
+     * TemplateResRef), sized to its game inventory-cell footprint. Returns null
+     * while the decode is still pending; views re-query via the late-icon
+     * listener.
+     */
+    fun itemViewIcon(baseItem: Int, modelPart: Int, templateResRef: String): BufferedImage? {
+        val resref = itemIconResref(baseItem, modelPart, templateResRef.lowercase()) ?: return null
+        return scaledItemIcon(resref, baseItem)
+    }
+
+    /** Full-resolution item art for large presentation surfaces. */
+    fun itemViewIconFullResolution(baseItem: Int, modelPart: Int, templateResRef: String): BufferedImage? {
+        val resref = itemIconResref(baseItem, modelPart, templateResRef.lowercase()) ?: return null
+        fullResolutionItemIcons[resref]?.let { return it }
+        val source = image(resref) ?: return null
+        return trimToContent(source).also { fullResolutionItemIcons[resref] = it }
+    }
+
+    fun templateIcon(template: ItemTemplate): BufferedImage? {
         val resref = template.iconResref ?: itemIconResref(template.fieldList) ?: return null
         return scaledItemIcon(resref, template.baseItem)
     }
 
-    fun abilityIcon(abilityLabel: String, size: Int): ImageIcon? {
+    /** Item icon for an already-resolved resref, sized to the base item's cell footprint. */
+    fun itemIcon(resref: String, baseItem: Int): BufferedImage? = scaledItemIcon(resref, baseItem)
+
+    /** The game inventory-cell footprint (width x height) of a baseitems.2da row. */
+    fun itemFootprint(baseItem: Int): Pair<Int, Int> {
+        ensureBaseItems()
+        val base = baseItemClasses[baseItem]
+        return (base?.slotWidth ?: 1).coerceAtLeast(1) to (base?.slotHeight ?: 1).coerceAtLeast(1)
+    }
+
+    fun abilityIcon(abilityLabel: String, size: Int): BufferedImage? {
         val resref = AbilityIcons.iconResref(abilityLabel) ?: return null
         return scaledIcon(resref, size)
     }
@@ -125,7 +178,7 @@ class IconLibrary(private val environment: AppEnvironment) {
      * the background decode lands; panels re-query through
      * [addLateIconListener].
      */
-    fun talentIcon(databaseLabel: String, size: Int): ImageIcon? {
+    fun talentIcon(databaseLabel: String, size: Int): BufferedImage? {
         val match = TALENT_LABEL_PATTERN.find(databaseLabel) ?: return null
         val attribute = match.groupValues[1].take(3).lowercase()
         val level = match.groupValues[2]
@@ -244,55 +297,38 @@ class IconLibrary(private val environment: AppEnvironment) {
         }
         prime(listOf(resref))
         return null
-    }
+    }    /** Raw decoded game texture for declarative UI adapters; null while decoding is pending. */
+    fun imageByResref(resref: String): BufferedImage? = image(resref.lowercase())
 
-    private fun scaledIcon(resref: String, size: Int): ImageIcon? {
-        val key = resref + "@" + size
-        val cached = scaledIcons[key]
-        if (cached != null) {
-            return cached.orElse(null)
+    /**
+     * Decode a texture from the base game archives only, ignoring loose
+     * overrides. The editor shell draws game UI art (the HUD button atlas,
+     * container emblems) with pixel-coordinate crops, and a user mod such as
+     * ClassicUI replaces those textures with differently composed art; crops
+     * against overridden copies then land on empty space.
+     */
+    fun imageByResrefBaseArchive(resref: String): BufferedImage? {
+        val name = resref.lowercase()
+        return baseArchiveImages.computeIfAbsent(name) { key ->
+            for (suffix in listOf(".dds", ".tga")) {
+                val resource = environment.baseResourceFiles[key + suffix]
+                if (resource != null) {
+                    return@computeIfAbsent decodeResource(resource, key)
+                }
+            }
+            imageByResref(key)
         }
-        val image = image(resref) ?: return null
-        val icon = ImageIcon(scaleToBox(image, size, size))
-        scaledIcons[key] = Optional.of(icon)
-        return icon
-    }
-
-    /** Item icons sized to their game inventory-cell footprint (see baseitems.2da). */
-    private fun scaledItemIcon(resref: String, baseItem: Int): ImageIcon? {
-        ensureBaseItems()
-        val base = baseItemClasses[baseItem]
-        val slotWidth = base?.slotWidth ?: 1
-        val slotHeight = base?.slotHeight ?: 1
-        val key = resref + "@" + slotWidth + "x" + slotHeight
-        val cached = scaledIcons[key]
-        if (cached != null) {
-            return cached.orElse(null)
-        }
-        val image = image(resref) ?: return null
-        val (boxWidth, boxHeight) = displayBox(slotWidth, slotHeight)
-        val icon = ImageIcon(scaleToBox(trimToContent(image), boxWidth, boxHeight))
-        scaledIcons[key] = Optional.of(icon)
-        return icon
-    }
-
-    private fun displayBox(slotWidth: Int, slotHeight: Int): Pair<Int, Int> {
-        if (slotWidth <= 1 && slotHeight <= 1) {
-            return SQUARE_ICON to SQUARE_ICON
-        }
-        val unit = LARGE_ICON_SIZE.toDouble() / max(slotWidth, slotHeight)
-        return (slotWidth * unit).roundToInt() to (slotHeight * unit).roundToInt()
     }
 
     private fun decodeResref(resref: String): BufferedImage? {
         val resource = environment.resourceFiles[resref + ".dds"]
             ?: environment.resourceFiles[resref + ".tga"]
             ?: return null
-        val bytes = when (resource) {
-            is File -> FileInputStream(resource).use { it.readBytes() }
-            is KeyEntry -> resource.getInputStream().use { it.readBytes() }
-            else -> return null
-        }
+        return decodeResource(resource, resref)
+    }
+
+    private fun decodeResource(resource: Any, resref: String): BufferedImage? {
+        val bytes = ResourceAccess.open(resource)?.use { it.readBytes() } ?: return null
         val decoded = if (bytes.size >= 4 && bytes[0] == 0x44.toByte() && bytes[1] == 0x44.toByte() &&
             bytes[2] == 0x53.toByte() && bytes[3] == 0x20.toByte()
         ) {
@@ -305,6 +341,44 @@ class IconLibrary(private val environment: AppEnvironment) {
         return if (needsVerticalFlip(resref)) flipVertical(decoded) else decoded
     }
 
+    private fun scaledIcon(resref: String, size: Int): BufferedImage? {
+        val key = resref + "@" + size
+        val cached = scaledIcons[key]
+        if (cached != null) {
+            return cached.orElse(null)
+        }
+        val image = image(resref) ?: return null
+        val icon = scaleToBox(image, size, size)
+        scaledIcons[key] = Optional.of(icon)
+        return icon
+    }
+
+    /** Item icons sized to their game inventory-cell footprint (see baseitems.2da). */
+    private fun scaledItemIcon(resref: String, baseItem: Int): BufferedImage? {
+        ensureBaseItems()
+        val base = baseItemClasses[baseItem]
+        val slotWidth = base?.slotWidth ?: 1
+        val slotHeight = base?.slotHeight ?: 1
+        val key = resref + "@" + slotWidth + "x" + slotHeight
+        val cached = scaledIcons[key]
+        if (cached != null) {
+            return cached.orElse(null)
+        }
+        val image = image(resref) ?: return null
+        val (boxWidth, boxHeight) = displayBox(slotWidth, slotHeight)
+        val icon = scaleToBox(trimToContent(image), boxWidth, boxHeight)
+        scaledIcons[key] = Optional.of(icon)
+        return icon
+    }
+
+    private fun displayBox(slotWidth: Int, slotHeight: Int): Pair<Int, Int> {
+        if (slotWidth <= 1 && slotHeight <= 1) {
+            return SQUARE_ICON to SQUARE_ICON
+        }
+        val unit = LARGE_ICON_SIZE.toDouble() / max(slotWidth, slotHeight)
+        return (slotWidth * unit).roundToInt() to (slotHeight * unit).roundToInt()
+    }
+
     private fun toBufferedImage(width: Int, height: Int, argb: IntArray): BufferedImage {
         val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
         image.setRGB(0, 0, width, height, argb, 0, width)
@@ -312,13 +386,15 @@ class IconLibrary(private val environment: AppEnvironment) {
     }
 
     /**
-     * The game's inventory textures are stored bottom-up (D3D UV convention)
-     * and the game un-flips them at draw time: in-game weapons show handle-up
-     * while the raw texture stores blade-up; the same holds for potions, drinks,
-     * food, scrolls, books and ingredients (verified by matching the owner's
-     * in-game screenshots against the raw textures — scroll crops match their
-     * flipped variant with ~0.8 correlation and ~0.0 stored). The ability atlas
-     * (`ui_ab_*`) and the placeholder are authored top-down, so they are exempt.
+     * The game stores every texture bottom-up (D3D UV convention) except the
+     * ability atlas: item icons (`iit_*`/`it_*`) and interface art (the HUD
+     * button atlas, the character/inventory tab medallions, the inventory
+     * category emblems) all render inverted as-decoded — verified by matching
+     * the owner's in-game screenshots against the raw textures (scroll crops
+     * correlate ~0.8 with the flipped variant and ~0.0 with the stored one;
+     * the HUD round buttons and the tab medallions showed the same). The
+     * `ui_ab_*` talent coins are authored top-down, as is the placeholder, so
+     * they are exempt.
      */
     internal fun needsVerticalFlip(resref: String): Boolean {
         return !resref.startsWith("ui_ab_") && resref != PLACEHOLDER
@@ -399,11 +475,7 @@ class IconLibrary(private val environment: AppEnvironment) {
                 return
             }
             val resource = environment.resourceFiles["baseitems.2da"]
-            val input: InputStream? = when (resource) {
-                is File -> FileInputStream(resource)
-                is KeyEntry -> resource.getInputStream()
-                else -> null
-            }
+            val input: InputStream? = resource?.let(ResourceAccess::open)
             if (input != null) {
                 try {
                     val table = TextDatabase(input)
@@ -437,22 +509,20 @@ class IconLibrary(private val environment: AppEnvironment) {
                 invokeListener()
             } else if (!trailingScheduled) {
                 trailingScheduled = true
-                val timer = Timer((REPAINT_INTERVAL - elapsed).toInt()) {
+                repaintExecutor.schedule({
                     synchronized(repaintLock) {
                         trailingScheduled = false
                         lastPaintAt = System.currentTimeMillis()
                     }
                     invokeListener()
-                }
-                timer.isRepeats = false
-                timer.start()
+                }, REPAINT_INTERVAL - elapsed, TimeUnit.MILLISECONDS)
             }
         }
     }
 
     private fun invokeListener() {
         for (listener in lateIconListeners) {
-            SwingUtilities.invokeLater(listener)
+            repaintExecutor.execute(listener)
         }
     }
 

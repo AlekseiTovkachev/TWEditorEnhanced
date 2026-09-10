@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 
@@ -16,13 +17,14 @@ import org.junit.jupiter.api.Timeout
  * displayed label and a sample of item templates resolve to decodable textures.
  */
 @Timeout(120)
+@Tag("local")
 class GameIconsTest {
 
     @Test
     fun everySignAndStyleLabelResolvesToATexture() {
         val environment = environment() ?: return assumeTrue(false, "game install not present")
 
-        val labels = SignsPanel.abilityLabels() + StylesPanel.abilityLabels()
+        val labels = HeroAbilityLabels.signs + HeroAbilityLabels.combatStyles
         assertTrue(labels.size >= 100, "expected the full ability grid, got " + labels.size)
         for (label in labels) {
             val resref = AbilityIcons.iconResref(label)
@@ -60,6 +62,24 @@ class GameIconsTest {
             }
             assertNotNull(icon, "no icon decoded for talent '" + label + "'")
         }
+    }
+
+    @Test
+    fun everyAbilityLabelResolvesToAGameName() {
+        val environment = environment() ?: return assumeTrue(false, "game install not present")
+        val labels = HeroAbilityLabels.attributes + HeroAbilityLabels.signs + HeroAbilityLabels.combatStyles
+        for (label in labels) {
+            val name = AbilityNames.displayName(environment, label)
+            assertTrue(!name.contains("·"), "label '$label' fell back to the synthetic name '$name'")
+            assertTrue(!name.contains("_"), "name for '$label' looks like a raw key: '$name'")
+        }
+        // spot-check the curated table against the real TLK headings
+        assertEquals("Position", AbilityNames.displayName(environment, "Strength2 Upgrade1"))
+        assertEquals("Flaying", AbilityNames.displayName(environment, "Dexterity1 Upgrade1"))
+        assertEquals("Cut at the Jugular I", AbilityNames.displayName(environment, "StyleSteelStrong1 Upgrade1"))
+        assertEquals("Gust", AbilityNames.displayName(environment, "Aard2 Upgrade2"))
+        assertEquals("Barrier II", AbilityNames.displayName(environment, "Quen2 Upgrade1"))
+        assertEquals("Strong Steel (level 3)", AbilityNames.displayName(environment, "StyleSteelStrong3"))
     }
 
     @Test
@@ -102,15 +122,33 @@ class GameIconsTest {
         library.primeAbilities(listOf("Aard1"))
         val abilityIcon = poll(10_000) { library.abilityIcon("Aard1", 18) }
         assertNotNull(abilityIcon, "ability icon did not decode in time")
-        assertEquals(18, abilityIcon!!.iconWidth)
+        assertEquals(18, abilityIcon!!.width)
 
         val swordFields = templateFields(environment, "it_stlswd_001")
         library.primeTemplates(listOf(ItemTemplate(swordFields)))
         val itemIcon = poll(10_000) { library.itemIcon(swordFields) }
         assertNotNull(itemIcon, "item icon did not decode in time")
         // swords take a 2x5-slot cell: long side 48, portrait aspect
-        assertEquals(48, itemIcon!!.iconHeight)
-        assertTrue(itemIcon.iconWidth < itemIcon.iconHeight, "sword icon should be portrait, was ${itemIcon.iconWidth}x${itemIcon.iconHeight}")
+        assertEquals(48, itemIcon!!.height)
+        assertTrue(itemIcon.width < itemIcon.height, "sword icon should be portrait, was ${itemIcon.width}x${itemIcon.height}")
+    }
+
+    @Test
+    fun equipmentIconPathRetainsMoreSourcePixelsThanTheInventoryThumbnail() {
+        val environment = environment() ?: return assumeTrue(false, "game install not present")
+        val library = environment.icons
+        val swordFields = templateFields(environment, "it_stlswd_001")
+        library.primeTemplates(listOf(ItemTemplate(swordFields)))
+
+        val thumbnail = poll(10_000) { library.itemViewIcon(1, 1, "it_stlswd_001") }
+        val equipment = poll(10_000) { library.itemViewIconFullResolution(1, 1, "it_stlswd_001") }
+
+        assertNotNull(thumbnail)
+        assertNotNull(equipment)
+        assertTrue(
+            maxOf(equipment!!.width, equipment.height) > maxOf(thumbnail!!.width, thumbnail.height),
+            "Equipment should retain more source pixels than the ${thumbnail.width}x${thumbnail.height} inventory thumbnail"
+        )
     }
 
     @Test
@@ -121,7 +159,10 @@ class GameIconsTest {
         for (flipped in listOf(
             "iit_stlswd_001", "iit_svswd_006", "iit_potion_004", "iit_drink_001",
             "iit_food_001", "iit_gem_001", "iit_grease_020", "iit_bomb_006", "iit_trophy_001",
-            "iit_scroll_014", "it_scroll_115", "iit_ingr_026", "it_ingr_026", "iit_book_001"
+            "iit_scroll_014", "it_scroll_115", "iit_ingr_026", "it_ingr_026", "iit_book_001",
+            // interface art: nav medallions, container emblems, the HUD atlas
+            "ui_chr_ti01", "ui_jrn_ti01", "ui_inv_ti01",
+            "ui_inv_bag", "ui_inv_potion", "ui_inv_quest", "ui_hud_buttons"
         )) {
             assertTrue(library.needsVerticalFlip(flipped), flipped + " is stored bottom-up in the game archives")
         }
@@ -167,9 +208,13 @@ class GameIconsTest {
         if (!mainKey.isFile) {
             return null
         }
+        val stringsFile = File(installData, "dialog_3.tlk")
         val environment = AppEnvironment()
         environment.fileSeparator = "\\"
         environment.languageID = 3
+        if (stringsFile.isFile) {
+            environment.stringsDatabase = StringsDatabase(stringsFile)
+        }
         environment.resourceFiles = Main.resourceFilesFrom(KeyDatabase(environment, mainKey.path))
         return environment
     }

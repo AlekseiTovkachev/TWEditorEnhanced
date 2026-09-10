@@ -2,6 +2,7 @@ package app.tweditor
 
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.nio.file.Path
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 
+@Tag("local")
 class LocalSavesSummaryTest {
     @Test
     fun everyLocalSaveYieldsACompleteSummary() {

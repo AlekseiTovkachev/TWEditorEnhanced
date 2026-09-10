@@ -6,6 +6,10 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 class SaveDatabase(val environment: AppEnvironment, file: File) {
     private val file: File = file
@@ -82,16 +86,30 @@ class SaveDatabase(val environment: AppEnvironment, file: File) {
 
     @Throws(IOException::class)
     fun save() {
-        val outputFile = File(this.file.getPath() + ".tmp")
-        if (outputFile.exists()) {
-            outputFile.delete()
-        }
+        saveTransactional()
+    }
+
+    /**
+     * Writes a complete candidate beside the destination, reopens it through
+     * the real archive parser, validates every entry stream, and only then
+     * replaces the destination. The function parameters are deliberately
+     * injectable so the Save seam can exercise creation, validation, and
+     * replacement failures without touching a user's original save.
+     */
+    @Throws(IOException::class)
+    fun saveTransactional(
+        afterCandidateWritten: (File) -> Unit = {},
+        validator: (SaveDatabase) -> Unit = { candidate -> validateCandidate(candidate) },
+        replacer: (Path, Path) -> Unit = ::replaceAtomically
+    ) {
+        val candidate = createCandidateFile()
+        val expectedEntries = this.entries.map { it.resourceName }
         val buffer = ByteArray(4096)
 
         var listOffset = this.dataOffset
         try {
             FileInputStream(this.file).use { headerIn ->
-                FileOutputStream(outputFile).use { out ->
+                FileOutputStream(candidate).use { out ->
                     var residualLength = this.dataOffset
                     while (residualLength > 0) {
                         val length = residualLength.coerceAtMost(buffer.size)
@@ -152,16 +170,91 @@ class SaveDatabase(val environment: AppEnvironment, file: File) {
                     out.write(buffer, 0, 8)
                 }
             }
-        } catch (exc: IOException) {
-            outputFile.delete()
-            throw exc
+        } catch (exc: Exception) {
+            candidate.delete()
+            if (exc is IOException) {
+                throw exc
+            }
+            throw IOException("Unable to encode Save candidate", exc)
         }
 
-        if (this.file.exists() && !this.file.delete()) {
-            throw IOException("Unable to delete '" + this.file.getName() + "'")
+        try {
+            afterCandidateWritten(candidate)
+        } catch (exc: Exception) {
+            throw SaveWriteException(
+                "Candidate post-write stage failed; original save was left untouched. Candidate retained at '" +
+                    candidate.getPath() + "'",
+                candidate,
+                exc
+            )
         }
-        if (!outputFile.renameTo(this.file)) {
-            throw IOException("Unable to rename '" + outputFile.getName() + "'")
+
+        try {
+            val candidateDatabase = reloadCandidate(candidate, expectedEntries)
+            validator(candidateDatabase)
+        } catch (exc: Exception) {
+            throw SaveWriteException(
+                "Candidate validation failed; original save was left untouched. Candidate retained at '" +
+                    candidate.getPath() + "'",
+                candidate,
+                exc
+            )
+        }
+
+        try {
+            replacer(candidate.toPath(), this.file.toPath())
+        } catch (exc: Exception) {
+            throw SaveWriteException(
+                "Unable to install candidate; original save was left untouched. Candidate retained at '" +
+                    candidate.getPath() + "'",
+                candidate,
+                exc
+            )
+        }
+    }
+
+    private fun createCandidateFile(): File {
+        val parent = this.file.toPath().toAbsolutePath().parent
+            ?: throw IOException("Save destination has no parent directory")
+        return try {
+            Files.createTempFile(parent, this.file.getName() + ".candidate-", ".tmp").toFile()
+        } catch (exc: IOException) {
+            throw IOException("Unable to create a Save candidate beside '" + this.file.getName() + "'", exc)
+        }
+    }
+
+    private fun validateCandidate(candidate: SaveDatabase) {
+        for (entry in candidate.entries) {
+            entry.getInputStream().use { input ->
+                val buffer = ByteArray(8192)
+                while (input.read(buffer) > 0) {
+                    // Reading to EOF validates both raw and compressed entries.
+                }
+            }
+        }
+    }
+
+    private fun reloadCandidate(candidate: File, expectedEntries: List<String>): SaveDatabase {
+        val candidateDatabase = SaveDatabase(environment, candidate)
+        candidateDatabase.load()
+        val actualEntries = candidateDatabase.entries.map { it.resourceName }
+        if (actualEntries != expectedEntries) {
+            throw IOException(
+                "Candidate entry identities differ from the source: expected " +
+                    expectedEntries.size + ", got " + actualEntries.size
+            )
+        }
+        return candidateDatabase
+    }
+
+    private fun replaceAtomically(candidate: Path, destination: Path) {
+        try {
+            Files.move(candidate, destination, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (unsupported: AtomicMoveNotSupportedException) {
+            // The candidate is in the destination directory, so the fallback
+            // still replaces in one filesystem operation without deleting the
+            // original first.
+            Files.move(candidate, destination, StandardCopyOption.REPLACE_EXISTING)
         }
     }
 

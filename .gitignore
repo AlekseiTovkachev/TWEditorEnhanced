@@ -91,3 +91,6 @@ Temporary Items
 
 # Editor backups (a pre-write copy next to the save; not editable)
 *.bak
+
+# Owner's local third-party mod staging (downloaded mods, installers)
+mods/

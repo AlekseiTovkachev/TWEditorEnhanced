@@ -1,14 +1,29 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.tasks.testing.Test
 
 plugins {
-    application
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.kover)
 }
 
 version = "4.1.0-SNAPSHOT"
 
-application {
-    mainClass = "app.tweditor.Main"
+compose.desktop {
+    application {
+        mainClass = "app.tweditor.Main"
+        nativeDistributions {
+            targetFormats(TargetFormat.Exe)
+            packageName = "TWEditor"
+            packageVersion = version.toString().removeSuffix("-SNAPSHOT")
+            modules("java.desktop")
+            windows {
+                iconFile.set(project.file("res/TWEditor.ico"))
+            }
+        }
+    }
 }
 
 java {
@@ -20,120 +35,74 @@ java {
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_25
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.release = 25
+    options.release = 17
 }
 
 dependencies {
-    implementation(libs.flatlaf)
+    implementation(compose.desktop.currentOs)
+    implementation(compose.material3)
+    testImplementation(compose.desktop.uiTestJUnit4)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
+// Kover is intentionally report-only.  Coverage is evidence for the mutation
+// families documented in the issue, not a gate with an arbitrary global
+// percentage threshold.
+tasks.register("coverageReport") {
+    group = "verification"
+    description = "Writes the report-only Kover coverage artifacts."
+    dependsOn("koverHtmlReport", "koverXmlReport")
+}
+
 tasks.test {
     useJUnitPlatform()
+    // Tests that inspect owner-installed saves or game resources are opt-in;
+    // the committed fixtures above are the release-gating test surface.
+    useJUnitPlatform {
+        excludeTags("local")
+    }
     systemProperty("tweditor.screenshots", System.getProperty("tweditor.screenshots"))
     testLogging {
         events("passed", "skipped", "failed")
     }
 }
 
-tasks.jar {
-    manifest {
-        attributes(
-            "Main-Class" to application.mainClass.get(),
-            "Implementation-Title" to project.name,
-            "Implementation-Version" to project.version
-        )
+tasks.register<Test>("localSaveTest") {
+    group = "verification"
+    description = "Runs opt-in tests against owner-installed game resources and .local-saves files."
+    dependsOn(tasks.testClasses)
+    testClassesDirs = tasks.test.get().testClassesDirs
+    classpath = tasks.test.get().classpath
+    useJUnitPlatform {
+        includeTags("local")
     }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }) {
-        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+    systemProperty("tweditor.screenshots", System.getProperty("tweditor.screenshots"))
+    testLogging {
+        events("passed", "skipped", "failed")
     }
 }
 
-val runtimeImageDir = layout.buildDirectory.dir("runtime-image")
 val appImageDir = layout.buildDirectory.dir("app-image")
-val jpackageInputDir = layout.buildDirectory.dir("jpackage-input")
-val appImageDest = layout.buildDirectory.dir("distributions")
-
-val packageVersion = version.toString().removeSuffix("-SNAPSHOT")
-
-val toolchainJdkHome = javaToolchains.launcherFor {
-    languageVersion = java.toolchain.languageVersion
-    vendor = java.toolchain.vendor
-}.map { it.metadata.installationPath }
-
-val jlinkRuntime = tasks.register<Exec>("jlinkRuntime") {
+tasks.register<Copy>("packageWindowsAppImage") {
     group = "distribution"
-    description = "Builds a module-trimmed Java runtime (java.base + java.desktop, per jdeps on the app jar)."
-    dependsOn(tasks.jar)
-    outputs.dir(runtimeImageDir)
-    val runtime = runtimeImageDir.get().asFile
+    description = "Builds the self-contained Windows Compose app image."
+    dependsOn(tasks.named("createDistributable"))
     doFirst {
-        runtime.deleteRecursively()
+        val destination = appImageDir.get().dir("TWEditor").asFile
+        if (destination.exists()) {
+            destination.walkBottomUp().forEach {
+                it.setWritable(true)
+            }
+            destination.deleteRecursively()
+        }
     }
-    commandLine(
-        toolchainJdkHome.get().file("bin/jlink.exe").asFile.absolutePath,
-        "--add-modules", "java.base,java.desktop",
-        "--strip-debug",
-        "--no-header-files",
-        "--no-man-pages",
-        "--compress", "zip-6",
-        "--output", runtime.absolutePath
-    )
-}
-
-tasks.register<Exec>("jpackageAppImage") {
-    group = "distribution"
-    description = "Builds a self-contained Windows app-image via jpackage with the trimmed runtime and the app icon."
-    dependsOn(jlinkRuntime)
-    inputs.files(tasks.jar)
-    outputs.dir(appImageDir)
-    val inputDir = jpackageInputDir.get().asFile
-    val image = appImageDir.get().asFile
-    doFirst {
-        inputDir.deleteRecursively()
-        inputDir.mkdirs()
-        tasks.jar.get().archiveFile.get().asFile.copyTo(
-            inputDir.resolve(tasks.jar.get().archiveFileName.get()), overwrite = true)
-        image.deleteRecursively()
-    }
-    commandLine(
-        toolchainJdkHome.get().file("bin/jpackage.exe").asFile.absolutePath,
-        "--type", "app-image",
-        "--input", inputDir.absolutePath,
-        "--main-jar", tasks.jar.get().archiveFileName.get(),
-                "--main-class", application.mainClass.get(),
-                "--name", "TWEditor",
-                "--app-version", packageVersion,
-                "--vendor", "AlekseiTovkachev",
-                "--icon", file("res/TWEditor.ico").absolutePath,
-                "--java-options", "-Xmx256m",
-                "--java-options", "--enable-native-access=ALL-UNNAMED",
-        "--runtime-image", runtimeImageDir.get().asFile.absolutePath,
-        "--dest", image.absolutePath
-    )
-}
-
-tasks.register<Zip>("zipAppImage") {
-    group = "distribution"
-    description = "Zips the jpackage app-image into the distributable artifact."
-    dependsOn(tasks.named("jpackageAppImage"))
-    from(appImageDir)
-    archiveBaseName = "TWEditor"
-    archiveAppendix = "win"
-    archiveVersion = packageVersion
-    destinationDirectory = appImageDest
-}
-
-tasks.register("packageWindowsAppImage") {
-    group = "distribution"
-    description = "Produces the zipped, self-contained Windows app-image (single entry point)."
-    dependsOn(tasks.named("zipAppImage"))
+    from(layout.buildDirectory.dir("compose/binaries/main/app/TWEditor"))
+    into(appImageDir.map { it.dir("TWEditor") })
 }

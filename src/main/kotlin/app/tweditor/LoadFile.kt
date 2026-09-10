@@ -4,14 +4,26 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
-import javax.swing.SwingUtilities
 
-class LoadFile(
-    private val progressDialog: ProgressDialog,
+class LoadFile private constructor(
     private val session: GameSession,
     private val environment: AppEnvironment,
-    private var file: File
+    private var file: File,
+    private val reportProgress: (Int) -> Unit,
+    private val complete: (Boolean) -> Unit,
+    private val reportError: (String, Throwable) -> Unit,
+    @Suppress("UNUSED_PARAMETER") private val callbackMode: Boolean
 ) : Thread() {
+    /** Headless/asynchronous seam used by the Compose shell and file-workflow tests. */
+    constructor(
+        session: GameSession,
+        environment: AppEnvironment,
+        file: File,
+        onProgress: (Int) -> Unit,
+        onComplete: (Boolean) -> Unit,
+        onError: (String, Throwable) -> Unit = { text, exc -> Main.logException(text, exc) }
+    ) : this(session, environment, file, onProgress, onComplete, onError, true)
+
     private var loadSuccessful = false
 
     override fun run() {
@@ -20,7 +32,7 @@ class LoadFile(
         try {
             val saveDatabase = SaveDatabase(environment, this.file)
             saveDatabase.load()
-            progressDialog.updateProgress(25)
+            reportProgress(25)
             val saveName = saveDatabase.getName()
             saveDatabase.setSavePrefix(saveName + environment.fileSeparator)
 
@@ -49,9 +61,10 @@ class LoadFile(
             out = null
             val smmDatabase = Database(environment, session.smmFile)
             smmDatabase.load()
-            progressDialog.updateProgress(35)
+            reportProgress(35)
 
             var list = smmDatabase.getTopLevelStruct()!!.getValue() as DBList
+            session.setModuleOwnership(SaveModuleOwnershipReader.read(list))
             val startingMod = list.getString("StartingMod")
             if (startingMod.isEmpty()) {
                 throw DBException("StartingMod not found in SMM database")
@@ -89,11 +102,11 @@ class LoadFile(
             input = null
             out!!.close()
             out = null
-            progressDialog.updateProgress(50)
+            reportProgress(50)
 
             val modDatabase = ResourceDatabase(session.modFile)
             modDatabase.load()
-            progressDialog.updateProgress(60)
+            reportProgress(60)
 
             val resourceEntry = modDatabase.getEntry("module.ifo")
             if (resourceEntry == null) {
@@ -111,7 +124,7 @@ class LoadFile(
             input = null
             out!!.close()
             out = null
-            progressDialog.updateProgress(75)
+            reportProgress(75)
 
             val database = Database(environment, session.databaseFile)
             database.load()
@@ -124,7 +137,7 @@ class LoadFile(
             if (list.getElementCount() == 0) {
                 throw DBException("Mod_PlayerList is empty")
             }
-            progressDialog.updateProgress(80)
+            reportProgress(80)
 
             var fileName = questDBName + ".qdb"
             saveEntry = saveDatabase.getEntry(fileName)
@@ -142,7 +155,7 @@ class LoadFile(
                 throw DBException("Quests not found in quest database")
             }
             questList = element.getValue() as DBList
-            progressDialog.updateProgress(85)
+            reportProgress(85)
 
             count = questList.getElementCount()
             val quests = ArrayList<Quest>(count)
@@ -159,7 +172,7 @@ class LoadFile(
                 questTextDatabase.load(input)
                 input!!.close()
                 input = null
-                val quest = Quest(resourceName, questTextDatabase.getTopLevelStruct()!!)
+                val quest = Quest(resourceName, questTextDatabase.getTopLevelStruct()!!, questTextDatabase)
                 if (quest.questName.isNotEmpty()) {
                     quests.add(quest)
                 }
@@ -190,7 +203,7 @@ class LoadFile(
             val playerDatabase = Database(environment, session.playerFile)
             playerDatabase.load()
 
-            progressDialog.updateProgress(100)
+            reportProgress(100)
 
             session.saveDatabase = saveDatabase
             session.modDatabase = modDatabase
@@ -199,11 +212,11 @@ class LoadFile(
             session.smmDatabase = smmDatabase
             this.loadSuccessful = true
         } catch (exc: DBException) {
-            Main.logException("Save file structure is not valid", exc)
+            reportError("Save file structure is not valid", exc)
         } catch (exc: IOException) {
-            Main.logException("Unable to read save file", exc)
+            reportError("Unable to read save file", exc)
         } catch (exc: Throwable) {
-            Main.logException("Exception while opening save file", exc)
+            reportError("Exception while opening save file", exc)
         }
 
         try {
@@ -212,8 +225,6 @@ class LoadFile(
         } catch (exc: IOException) {
         }
 
-        SwingUtilities.invokeLater {
-            progressDialog.closeDialog(loadSuccessful)
-        }
+        complete(loadSuccessful)
     }
 }

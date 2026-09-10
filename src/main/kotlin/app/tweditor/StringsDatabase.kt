@@ -2,24 +2,30 @@ package app.tweditor
 
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
 
-class StringsDatabase(val file: File) {
-    private val input = RandomAccessFile(file, "r")
+class StringsDatabase private constructor(
+    val file: File,
+    private val inMemory: ByteArray?
+) : AutoCloseable {
+    private val input: RandomAccessFile? = if (inMemory == null) RandomAccessFile(file, "r") else null
     private val languageID: Int
     private val stringCount: Int
     private val entryOffset = 20
     private val stringOffset: Int
 
+    constructor(file: File) : this(file, null)
+
     constructor(filePath: String) : this(File(filePath))
 
+    /** Reads an archive entry once, allowing packed module TLKs to be layered. */
+    constructor(inputStream: InputStream, name: String = "module.tlk") :
+        this(File(name), inputStream.use { it.readBytes() })
+
     init {
-        val buffer = ByteArray(20)
-        val count = input.read(buffer)
-        if (count != buffer.size) {
-            throw DBException("TLK header truncated")
-        }
+        val buffer = readBytes(0L, 20, "TLK header")
         val type = String(buffer, 0, 4)
         val version = String(buffer, 4, 4)
         if (type != "TLK ") {
@@ -43,21 +49,20 @@ class StringsDatabase(val file: File) {
             val refid = stringRef and 0xFFFFFF
             if (refid < stringCount) {
                 val buffer = ByteArray(40)
-                input.seek(entryOffset + refid * 40L)
-                val count = input.read(buffer)
-                if (count != buffer.size) {
-                    throw DBException("String entry truncated for reference " + refid)
-                }
+                val entry = readBytes(entryOffset + refid * 40L, buffer.size, "String entry for reference " + refid)
+                entry.copyInto(buffer)
 
                 if (buffer[0].toInt() and 0x1 != 0) {
                     val offset = getInteger(buffer, 28)
                     val length = getInteger(buffer, 32)
-                    val data = ByteArray(length)
-                    input.seek(stringOffset + offset.toLong())
-                    val dataCount = input.read(data)
-                    if (dataCount != length) {
-                        throw DBException("String data truncated for reference " + refid)
+                    if (length < 0) {
+                        throw DBException("String data length is invalid for reference " + refid)
                     }
+                    val data = readBytes(
+                        stringOffset + offset.toLong(),
+                        length,
+                        "String data for reference " + refid
+                    )
                     string = String(data, StandardCharsets.UTF_8)
                 }
             }
@@ -132,9 +137,36 @@ class StringsDatabase(val file: File) {
     @Suppress("removal")
     protected fun finalize() {
         try {
-            input.close()
+            close()
         } catch (exc: IOException) {
         }
+    }
+
+    override fun close() {
+        input?.close()
+    }
+
+    private fun readBytes(offset: Long, length: Int, label: String): ByteArray {
+        if (offset < 0L || length < 0) {
+            throw DBException(label + " is invalid")
+        }
+        val bytes = inMemory
+        if (bytes != null) {
+            if (offset > bytes.size.toLong() || length.toLong() > bytes.size.toLong() - offset) {
+                throw DBException(label + " truncated")
+            }
+            return bytes.copyOfRange(offset.toInt(), offset.toInt() + length)
+        }
+
+        val fileInput = input ?: throw DBException("TLK input is closed")
+        val result = ByteArray(length)
+        try {
+            fileInput.seek(offset)
+            fileInput.readFully(result)
+        } catch (exc: IOException) {
+            throw DBException(label + " truncated", exc)
+        }
+        return result
     }
 
     private fun getInteger(buffer: ByteArray, offset: Int): Int {

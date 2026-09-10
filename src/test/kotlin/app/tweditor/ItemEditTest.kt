@@ -1,6 +1,7 @@
 package app.tweditor
 
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
@@ -38,10 +39,8 @@ class ItemEditTest {
 
         val repacked = SaveDatabase(environment, save)
         repacked.load()
-        val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
         val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!)
-        assertTrue(allowedToChange.containsAll(rewritten),
-            "entries outside the module .sav container, player.utc and the .smm file changed: " + rewritten)
+        SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
         val reloaded = SaveSeamSupport.load(environment, save, tempDir)
         val reloadedEdit = itemEdit(reloaded)
@@ -66,10 +65,8 @@ class ItemEditTest {
 
         val repacked = SaveDatabase(environment, save)
         repacked.load()
-        val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
         val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!)
-        assertTrue(allowedToChange.containsAll(rewritten),
-            "entries outside the module .sav container, player.utc and the .smm file changed: " + rewritten)
+        SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
         val reloaded = SaveSeamSupport.load(environment, save, tempDir)
         val reloadedEdit = itemEdit(reloaded)
@@ -97,10 +94,8 @@ class ItemEditTest {
 
         val repacked = SaveDatabase(environment, save)
         repacked.load()
-        val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
         val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!)
-        assertTrue(allowedToChange.containsAll(rewritten),
-            "entries outside the module .sav container, player.utc and the .smm file changed: " + rewritten)
+        SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
         val reloaded = SaveSeamSupport.load(environment, save, tempDir)
         val reloadedEdit = itemEdit(reloaded)
@@ -140,10 +135,8 @@ class ItemEditTest {
 
         val repacked = SaveDatabase(environment, save)
         repacked.load()
-        val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
         val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!)
-        assertTrue(allowedToChange.containsAll(rewritten),
-            "entries outside the module .sav container, player.utc and the .smm file changed: " + rewritten)
+        SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
         val reloaded = SaveSeamSupport.load(environment, save, tempDir)
         val reloadedEdit = itemEdit(reloaded)
@@ -165,6 +158,7 @@ class ItemEditTest {
         assertEquals(100, reloadedEdit.customCost, "copying power must not change the price")
     }
 
+    @Tag("local")
     @Test
     fun localSavesSurviveWeaponAbilityRewrites(@TempDir tempDir: Path) {
         val savesDir = Path.of(System.getProperty("tweditor.localSaves", ".local-saves")).toFile()
@@ -188,9 +182,8 @@ class ItemEditTest {
 
             val repacked = SaveDatabase(environment, copy)
             repacked.load()
-            val rewritten = SaveSeamSupport.changedEntries(before, SaveSeamSupport.entryDigests(repacked))
             val allowedToChange = setOf(loaded.modName!!, "player.utc", loaded.smmName!!)
-            assertTrue(allowedToChange.containsAll(rewritten), save.name + ": unexpected entries changed: " + rewritten)
+            SaveSeamSupport.assertUntouchedEntries(before, SaveSeamSupport.entryDigests(repacked), allowedToChange)
 
             val reloaded = SaveSeamSupport.load(environment, copy, workDir)
             val reloadedEdit = findWeaponEdit(reloaded)!!

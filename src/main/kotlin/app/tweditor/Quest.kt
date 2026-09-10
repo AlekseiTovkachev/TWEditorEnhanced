@@ -1,6 +1,13 @@
 package app.tweditor
 
-class Quest @Throws(DBException::class) constructor(private val resourceName: String, private val questElement: DBElement) {
+import java.io.File
+import java.io.FileOutputStream
+
+class Quest @Throws(DBException::class) constructor(
+    private val resourceName: String,
+    private var questElement: DBElement,
+    private val sourceDatabase: Database? = null
+) {
     val questName: String
     val questState: Int
     val motherDb: String
@@ -43,5 +50,25 @@ class Quest @Throws(DBException::class) constructor(private val resourceName: St
         this.questModified = modified
     }
 
+    internal fun snapshot(): QuestSnapshot = QuestSnapshot(resourceName, questElement.clone(), questModified)
+
+    internal fun restore(snapshot: QuestSnapshot) {
+        questElement = snapshot.topLevel.clone()
+        sourceDatabase?.setTopLevelStruct(questElement)
+        questModified = snapshot.modified
+    }
+
+    internal fun saveTo(file: File) {
+        val database = requireNotNull(sourceDatabase) { "Quest $resourceName has no loaded database backing it" }
+        database.setTopLevelStruct(questElement)
+        FileOutputStream(file).use { output -> database.save(output) }
+    }
+
     override fun toString(): String = questName
 }
+
+internal data class QuestSnapshot(
+    val resourceName: String,
+    val topLevel: DBElement,
+    val modified: Boolean
+)

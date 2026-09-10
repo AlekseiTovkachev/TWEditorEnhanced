@@ -34,6 +34,28 @@ class TutorialSaveGoldenTest {
     }
 
     @Test
+    fun committedFixturesCoverDistinctSupportedSaveShapes(@TempDir tempDir: Path) {
+        val storage = SaveSeamSupport.copyFixtureTo(tempDir, SaveSeamSupport.Fixture.STORAGE)
+        val storageLoaded = SaveSeamSupport.load(environment, storage, tempDir)
+        assertEquals(SaveSeamSupport.Fixture.STORAGE.expectedSaveName, storageLoaded.saveDatabase!!.getName())
+        val storageList = storageLoaded.smmDatabase!!.getTopLevelStruct()!!.getValue() as DBList
+        val storageRecord = StorageAccess.findStorageRecord(storageList)
+        assertNotNull(storageRecord, "the committed storage fixture must initialize the storage record")
+        assertTrue(
+            (storageRecord!!.getElement("ItemList")!!.getValue() as DBList).getElementCount() > 0,
+            "the committed storage fixture must contain stored items"
+        )
+
+        val equipment = SaveSeamSupport.copyFixtureTo(tempDir, SaveSeamSupport.Fixture.EQUIPMENT)
+        val equipmentLoaded = SaveSeamSupport.load(environment, equipment, tempDir)
+        assertEquals(SaveSeamSupport.Fixture.EQUIPMENT.expectedSaveName, equipmentLoaded.saveDatabase!!.getName())
+        val equipmentList = equipmentLoaded.player!!.getElement("Equip_ItemList")!!.getValue() as DBList
+        val carriedList = equipmentLoaded.player!!.getElement("ItemList")!!.getValue() as DBList
+        assertTrue(equipmentList.getElementCount() > 0, "the committed equipment fixture must contain equipped items")
+        assertTrue(carriedList.getElementCount() > 0, "the committed equipment fixture must contain carried items")
+    }
+
+    @Test
     fun parsedPlayerFactsMatchTheFixture(@TempDir tempDir: Path) {
         val save = SaveSeamSupport.copyFixtureTo(tempDir)
         val loaded = SaveSeamSupport.load(environment, save, tempDir)
@@ -84,8 +106,11 @@ class TutorialSaveGoldenTest {
         repacked.load()
         val after = SaveSeamSupport.entryDigests(repacked)
 
-        assertEquals(before.keys, after.keys)
-        val rewritten = SaveSeamSupport.changedEntries(before, after)
+        val rewritten = SaveSeamSupport.assertUntouchedEntries(
+            before,
+            after,
+            setOf(loaded.modName!!, "player.utc", loaded.smmName!!)
+        )
         assertEquals(setOf(loaded.modName!!, "player.utc", loaded.smmName!!), rewritten,
             "only the module .sav container, player.utc and the .smm file are rewritten by a save; every other entry must be byte-identical")
     }

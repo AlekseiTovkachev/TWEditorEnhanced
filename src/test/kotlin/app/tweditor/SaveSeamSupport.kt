@@ -6,10 +6,20 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.zip.CRC32
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 
 object SaveSeamSupport {
     const val FIXTURE_RESOURCE = "/saves/000007 - Территория Каэр Морхен-000.TheWitcherSave"
     const val EXPECTED_SAVE_NAME = "000007 - Территория Каэр Морхен-000"
+    const val STORAGE_FIXTURE_RESOURCE = "/saves/000029 - Деревенская таверна-026.TheWitcherSave"
+    const val EQUIPMENT_FIXTURE_RESOURCE = "/saves/000030 - Деревенская таверна-030.TheWitcherSave"
+
+    enum class Fixture(val resource: String, val expectedSaveName: String) {
+        EARLY_GAME(FIXTURE_RESOURCE, EXPECTED_SAVE_NAME),
+        STORAGE(STORAGE_FIXTURE_RESOURCE, "000029 - Деревенская таверна-026"),
+        EQUIPMENT(EQUIPMENT_FIXTURE_RESOURCE, "000030 - Деревенская таверна-030")
+    }
 
     fun createEnvironment(): AppEnvironment {
         val environment = AppEnvironment()
@@ -18,12 +28,12 @@ object SaveSeamSupport {
         return environment
     }
 
-    fun copyFixtureTo(directory: Path): File {
-        val url = requireNotNull(SaveSeamSupport::class.java.getResource(FIXTURE_RESOURCE)) {
-            "fixture not on classpath: " + FIXTURE_RESOURCE
+    fun copyFixtureTo(directory: Path, fixture: Fixture = Fixture.EARLY_GAME): File {
+        requireNotNull(SaveSeamSupport::class.java.getResource(fixture.resource)) {
+            "fixture not on classpath: " + fixture.resource
         }
-        val target = directory.resolve(FIXTURE_RESOURCE.substring(FIXTURE_RESOURCE.lastIndexOf('/') + 1))
-        SaveSeamSupport::class.java.getResourceAsStream(FIXTURE_RESOURCE)!!.use { input ->
+        val target = directory.resolve(fixture.resource.substring(fixture.resource.lastIndexOf('/') + 1))
+        SaveSeamSupport::class.java.getResourceAsStream(fixture.resource)!!.use { input ->
             Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING)
         }
         return target.toFile()
@@ -71,6 +81,7 @@ object SaveSeamSupport {
         smmDatabase.load()
         loaded.smmDatabase = smmDatabase
         val smmList = smmDatabase.getTopLevelStruct()!!.getValue() as DBList
+        loaded.session.setModuleOwnership(SaveModuleOwnershipReader.read(smmList))
         val startingMod = smmList.getString("StartingMod")
         val questBaseList = smmList.getElement("QuestBase_list")!!.getValue() as DBList
         val questBaseFields = questBaseList.getElement(0).getValue() as DBList
@@ -152,7 +163,7 @@ object SaveSeamSupport {
             qstEntry.getInputStream().use { input ->
                 qstDatabase.load(input)
             }
-            records[resourceName] = Quest(resourceName, qstDatabase.getTopLevelStruct()!!)
+            records[resourceName] = Quest(resourceName, qstDatabase.getTopLevelStruct()!!, qstDatabase)
         }
         return records
     }
@@ -206,11 +217,30 @@ object SaveSeamSupport {
     }
 
     fun changedEntries(before: Map<String, Long>, after: Map<String, Long>): Set<String> {
-        val changed = HashSet<String>()
-        for (name in before.keys) {
-            if (before[name] != after[name]) {
-                changed.add(name)
-            }
+        val names = HashSet<String>(before.keys)
+        names.addAll(after.keys)
+        return names.filterTo(HashSet()) { name -> before[name] != after[name] }
+    }
+
+    /**
+     * Shared release-gating assertion for Save-seam tests. Archive membership
+     * must stay unchanged and every entry outside [allowedChanges] must retain
+     * its byte digest after the write/reload round trip.
+     */
+    fun assertUntouchedEntries(
+        before: Map<String, Long>,
+        after: Map<String, Long>,
+        allowedChanges: Set<String> = emptySet()
+    ): Set<String> {
+        assertEquals(before.keys, after.keys, "Save archive entry keys must remain unchanged")
+        val changed = changedEntries(before, after)
+        val unexpected = changed - allowedChanges
+        assertTrue(
+            unexpected.isEmpty(),
+            "entries outside the allowed mutation set changed: $unexpected"
+        )
+        for (name in before.keys - allowedChanges) {
+            assertEquals(before[name], after[name], "untouched Save entry changed: $name")
         }
         return changed
     }

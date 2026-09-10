@@ -1,6 +1,6 @@
 # Compose Desktop UI Redesign
 
-This brief records the agreed product shape for the post-4.1 presentation-layer replacement. It does not authorize changes to Save semantics: the GUI-free Seam remains the source of truth.
+This brief records the accepted product shape for the post-4.1 presentation-layer replacement. It is now implemented by `ComposeMainWindow.kt` and the command/view-model seams; it is retained as architecture documentation, not as an unmerged prototype. It does not authorize changes to Save semantics: the GUI-free Seam remains the source of truth.
 
 ## Goals and boundaries
 
@@ -32,7 +32,7 @@ At comfortable widths, the workspace follows the game's item-screen composition:
 - **Quest Items** are outside both capacity grids and show no invented maximum.
 - **Storage** is a long, virtualized ordered icon list, not a spatial grid, and has no invented capacity. Search is a secondary action opened from a magnifying-glass icon rather than a permanently visible field. When the Save has no initialized Storage record, it explains that the player must visit an innkeeper in-game and disables Add.
 
-Clicking an occupied item selects it and opens details; double-click edits it. Each container exposes one `+` action that opens its destination-aware picker; empty cells are not individually rendered as Add buttons. Items can be dragged from carried containers or Storage into compatible Equipment slots. Compatible and incompatible targets are visibly distinguished during the drag, and an invalid drop leaves the source and destination unchanged. Removal is explicit and remains undoable until Save.
+Equipment uses a game-like paperdoll with slot-specific positions and proportions. Clicking an occupied slot selects it; clicking the selected slot again opens a searchable, destination-aware item list, while clicking an empty slot opens that list immediately. Every occupied Equipment slot has its own remove control, so Equipment has no global Add action. The carried-item containers retain their container-level Add actions. Items can also be dragged from carried containers or Storage into compatible Equipment slots. Compatible and incompatible targets are visibly distinguished during the drag, and an invalid drop leaves the source and destination unchanged. Removal is explicit and remains undoable until Save.
 
 The picker supplies search, category filters, icons, names, stack amount where applicable, and a details preview. Known-illegal destinations are blocked. Unverified templates remain selectable after a warning because the user may understand a Mod better than the editor. Existing unknown or invalid state is displayed with a warning and preserved unless explicitly changed.
 
@@ -79,3 +79,7 @@ Verification is layered:
 5. Representative in-game working-copy checks for each mutation family.
 
 Every mutation carries an evidence level: **verified in-game**, **structurally verified**, **unverified**, or **deliberately dangerous**. Kover reports coverage initially without an arbitrary global threshold. Curated screenshots of the dark theme may support review, but pixel-perfect snapshots are not the primary correctness gate.
+
+## Cutover status
+
+The shipped presentation has completed the linear cutover. Production code contains one Compose Desktop window, three semantic workspaces, Compose dialogs, and native operating-system file dialogs. Swing and FlatLaf presentation code are no longer part of the production source set. Statistics data calculation remains available for evidence and future presentation work, but the workspace is intentionally hidden.

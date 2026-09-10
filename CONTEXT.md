@@ -19,7 +19,7 @@ A named file stored inside a Save archive (module data, player blueprint, quest 
 _Avoid_: resource (reserved for game installation data), item
 
 **Module**:
-The in-save container describing the current game session — the session's state, the player list, and the quest database reference. The editor's Stats/Attributes/Signs/Styles/Equipment/Inventory/Difficulty tabs all read from the player record inside it; Quests and Knowledge read the quest database it points at; Storage reads the shared innkeeper chest in the .smm meta database; Statistics reads across all of them.
+The in-save container describing the current game session — the session's state, the player list, and the quest database reference. The Hero and Inventory workspaces read the player record inside it; Journal reads the quest database it points at; Storage reads the shared innkeeper chest in the .smm meta database; Statistics reads across all of them.
 _Avoid_: mod
 
 **Player record**:
@@ -47,7 +47,7 @@ The editor area that mirrors the game's journal sections: Quests, Characters, Lo
 _Avoid_: Knowledge tab
 
 **Hero workspace**:
-The editor area for Geralt's statistics, difficulty, attributes, Signs, and combat styles.
+The editor area for Geralt's summary, difficulty, attributes, Signs, and combat styles.
 _Avoid_: Stats tab, character tab
 
 **Advanced Journal Editing**:
@@ -106,6 +106,14 @@ _Avoid_: illegal item, unsupported item
 The save-database layer — reading/writing Save archives plus the parsed structures beneath them. The single place automated tests attach; deliberately GUI-free.
 _Avoid_: core, backend, engine
 
+**Compose shell**:
+The only shipped presentation layer. It owns the Hero, Journal, and Inventory workspaces and dispatches commands into the GUI-free Seam; it does not traverse or mutate `DBList` structures directly.
+_Avoid_: Swing shell, panel layer
+
+**Editor language**:
+The single language setting for everything the editor displays: the Compose shell's own labels and the game-content strings shown for a Save. Chosen from the languages the game installation provides; string edits write the selected language's slot.
+_Avoid_: locale, UI language, display language
+
 ### Work streams
 
 **Modernization**:
@@ -117,7 +125,7 @@ Work on how the editor looks and feels: theme depth, dark mode, spacing, small U
 _Avoid_: modernization (reserved for code work), reskin
 
 **UI redesign**:
-Replacement of the editor's presentation layer to create a cohesive, accessible Windows desktop application. It may reorganize navigation, layouts, and interactions, but preserves the existing editing capabilities and Save semantics.
+Completed replacement of the editor's presentation layer with a cohesive, accessible Compose Desktop application. It reorganized navigation, layouts, and interactions while preserving editing capabilities and Save semantics.
 _Avoid_: UI polish, reskin, modernization
 
 **Kotlin conversion**:

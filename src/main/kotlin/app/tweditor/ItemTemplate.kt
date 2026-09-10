@@ -1,14 +1,19 @@
 package app.tweditor
 
-class ItemTemplate(val fieldList: DBList) : Comparable<ItemTemplate> {
+class ItemTemplate(val fieldList: DBList, private val preferredModule: String? = null) : Comparable<ItemTemplate> {
     val baseItem: Int
-    val itemName: String
     val resourceName: String
     val iconResref: String?
 
+    /**
+     * The display name resolves on every read so a language switch re-renders
+     * picker entries through the active content TLK instead of a frozen copy.
+     */
+    val itemName: String
+        get() = fieldList.getString("LocalizedName", preferredModule)
+
     init {
         this.baseItem = fieldList.getInteger("BaseItem")
-        this.itemName = fieldList.getString("LocalizedName")
         this.resourceName = fieldList.getString("TemplateResRef")
         this.iconResref = fieldList.environment.icons.itemIconResref(fieldList)
     }

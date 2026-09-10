@@ -3,14 +3,26 @@ package app.tweditor
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import javax.swing.SwingUtilities
 
-class SaveFile(
-    private val progressDialog: ProgressDialog,
+class SaveFile private constructor(
     private val session: GameSession,
     private val environment: AppEnvironment,
-    private val targetFile: File? = null
+    private val targetFile: File?,
+    private val reportProgress: (Int) -> Unit,
+    private val complete: (Boolean) -> Unit,
+    private val reportError: (String, Throwable) -> Unit,
+    @Suppress("UNUSED_PARAMETER") private val callbackMode: Boolean
 ) : Thread() {
+    /** Headless/asynchronous seam used by the Compose shell and file-workflow tests. */
+    constructor(
+        session: GameSession,
+        environment: AppEnvironment,
+        targetFile: File? = null,
+        onProgress: (Int) -> Unit,
+        onComplete: (Boolean) -> Unit,
+        onError: (String, Throwable) -> Unit = { text, exc -> Main.logException(text, exc) }
+    ) : this(session, environment, targetFile, onProgress, onComplete, onError, true)
+
     private var saveSuccessful = false
 
     override fun run() {
@@ -20,28 +32,28 @@ class SaveFile(
             }
 
             session.database!!.save()
-            progressDialog.updateProgress(15)
+            reportProgress(15)
 
             val resourceEntry = ResourceEntry("module.ifo", session.databaseFile)
             session.modDatabase!!.addEntry(resourceEntry)
             session.modDatabase!!.save()
-            progressDialog.updateProgress(30)
+            reportProgress(30)
 
             val modDatabase = ResourceDatabase(session.modDatabase!!.getPath())
             modDatabase.load()
             session.modDatabase = modDatabase
-            progressDialog.updateProgress(45)
+            reportProgress(45)
 
             session.saveDatabase!!.addEntry(session.getModName()!!, session.modFile)
-            progressDialog.updateProgress(60)
+            reportProgress(60)
 
             session.playerDatabase!!.save()
             session.saveDatabase!!.addEntry(session.getPlayerName()!!, session.playerFile)
-            progressDialog.updateProgress(70)
+            reportProgress(70)
 
             session.smmDatabase!!.save()
             session.saveDatabase!!.addEntry(session.getSmmName()!!, session.smmFile)
-            progressDialog.updateProgress(80)
+            reportProgress(80)
 
             if (session.isJournalDirty()) {
                 FileOutputStream(session.questDatabaseFile).use { out ->
@@ -49,28 +61,26 @@ class SaveFile(
                 }
                 session.saveDatabase!!.addEntry(session.getQuestDBName()!! + ".qdb", session.questDatabaseFile)
             }
-            progressDialog.updateProgress(85)
+            reportProgress(85)
 
             session.writeSave()
-            progressDialog.updateProgress(90)
+            reportProgress(90)
 
             val saveDatabase = SaveDatabase(environment, session.saveDatabase!!.getPath())
             saveDatabase.load()
             session.saveDatabase = saveDatabase
 
-            progressDialog.updateProgress(100)
+            reportProgress(100)
 
             this.saveSuccessful = true
         } catch (exc: DBException) {
-            Main.logException("Unable to update save database", exc)
+            reportError("Unable to update save database", exc)
         } catch (exc: IOException) {
-            Main.logException("Unable to save file", exc)
+            reportError("Unable to save file", exc)
         } catch (exc: Throwable) {
-            Main.logException("Exception while saving file", exc)
+            reportError("Exception while saving file", exc)
         }
 
-        SwingUtilities.invokeLater {
-            progressDialog.closeDialog(saveSuccessful)
-        }
+        complete(saveSuccessful)
     }
 }
