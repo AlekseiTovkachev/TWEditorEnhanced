@@ -48,7 +48,7 @@ From the newest local save (`000185 - …-182.TheWitcherSave`, dumped via `Equip
 
 1. **27 marker-tagged templates added** to `Data\z_zSwords_DM\zzz_scabbards\templates\Swords\` (from the 1188 main archive; the user's install had only 4 of 31). **ROOT-CAUSE FIX for the migration pulse.**
 2. **Base mod templates restored to 49 files** in `Data\z_scabbard\uti\` (a 10 Sep "SSR install" pass had stripped 33 hooked templates; source = the user's own `Data\mod_backup.zip`).
-3. **`Data\z_zUWACaI\appearance.2da` merged:** UWACaI original + scabbard-mod rows applied (Geralt rows 7,8,9,12,13,15,16,18,21 blanked to `****`, matching the scabbard mod's intent) + rows 723-996 appended (completeness). UWACaI's original file is preserved in the backups (see location below).
+3. **`Data\z_zUWACaI\appearance.2da` merged and repaired:** UWACaI rows 0-722 are retained and rows 723-996 from the Scabbard Mod table are appended. An earlier merge incorrectly copied the base Scabbard Mod's blank rows over UWACaI armor rows 7,8,9,12,13,15,16,18,21. Equipping `it_witcharm_008` therefore selected empty appearance row 8 and made Geralt invisible while the independently attached scabbards remained visible. All nine UWACaI rows were restored from the hash-verified 1.01 NoRotWW archive; the appended rows remain. UWACaI's author also confirms that its table is intended to override the base Scabbard Mod table.
 4. **Data-tree hygiene:** all diagnostic `_backup` folders moved OUT of `Data\` (they were being scanned as resource roots and shadowed live files — see findings). They were copied, with all 34 file hashes verified, to the stable ignored workspace directory **`mods\scabbard-backups-2026-09-11\`**. The older `%TEMP%\opencode\tweditor_backups_out\` copy remains.
 
 **Separate-thread sword re-add change:** the owner reports that the automatic sword re-adding behavior was turned off in another thread. This repository does not contain that external change. A final filesystem audit here found `Data\z_scabbard\scripts\sword_load.ncs` still present, SHA-256 `D95DC8CA36030E1C4FB99F72E38F466CAA50336C3719FF9241AA72B78C5AAD6E`, byte-identical to the unpacked Scabbard Mod 1.04 copy. Therefore the behavior was not disabled by deleting or replacing that loose file; its exact other-thread mechanism must be consulted before reproducing or reversing it. Earlier in this thread the file was briefly renamed to `.off` for a probe and then restored.
@@ -88,13 +88,21 @@ The hash-verified original model/WFX and the safe vertex-only builds loaded norm
 
 **Escalation path (owner approved but deferred):** a post to Andy0167 on mod 1188/1191 with the full evidence (point 5.4 summary + the save-tag facts). Draft text exists in this thread and is ready to use verbatim.
 
-## 6. Tools in place
+## 6. Final silver scabbard fit
+
+The Witcher silver sword in the tested Save is `it_svswd_001`. Three loose models share the `ph_sv_001` resref, but visual trials proved that changing the high-priority TW3 CS copy at `Data\z_zSwords_DM\zzz_scabbards\silver\Witcher\ph_sv_001.mdb` changes the rendered sheath. Its verified original SHA-256 is `35F252B77E7FE92C19EAC98C3D088A0600787A5E5F0D364CF196CE9C7E282537`.
+
+**Accepted correction:** `PlanarDegrees=-0.45` around model-local Y and `DepthDegrees=-0.6` around model-local X. Both rigid rotations are anchored at the handle-side mouth of the three visual meshes (`scabbard_01.001`, `scabbard_01.002`, `shadow.001`). The accepted installed SHA-256 is `2AD7C550285CF0B4662E93FAF1EC90E16A2FF986E9EF190559E785D756902219`.
+
+The permanent reversible package is `patches\SilverScabbardFitFix\`. Its installer always regenerates from the digest-verified original, permits independent non-cumulative tuning, audits that changed bytes occur only in vertex arrays and bounding boxes, and leaves the sword model and all WFX files unchanged. Its uninstaller restores the verified original.
+
+## 7. Tools in place
 
 - `ncsdis.exe --witcher` (bytecode disassembler, Witcher engine tables): `%TEMP%\opencode\ncsdis\xoreos-tools-0.0.6-win64\ncsdis.exe`. Full listings already generated: `it_scab_stlrrr.ncs` → `%TEMP%\opencode\stlrrr.lst`, `it_arm1_on.ncs` → `%TEMP%\opencode\arm1.lst`.
 - **Save dump test:** `src/test/kotlin/app/tweditor/EquipmentDumpTest.kt` (read-only, `@Tag("local")`), run via `.\gradlew localSaveTest --tests "app.tweditor.EquipmentDumpTest"`, output to `build/equipment-dump.txt`. Reads the newest save dropped into `.local-saves\` (property `tweditor.localSaves`).
 - The user's save game: a copy of the newest `.TheWitcherSave` lives in `<workspace>\.local-saves\`.
 
-## 7. Backups of every change we made
+## 8. Backups of every change we made
 
 Stable copies are in `<workspace>\mods\scabbard-backups-2026-09-11\` (ignored by Git). The original `%TEMP%\opencode\tweditor_backups_out\` tree also remains:
 - `_appearance2da_backup\appearance.2da.uwacai` — UWACaI's original appearance.2da
@@ -106,7 +114,7 @@ Stable copies are in `<workspace>\mods\scabbard-backups-2026-09-11\` (ignored by
 
 These backups are already in a persistent workspace location; no relocation is required.
 
-## 8. Gotchas for the next agent
+## 9. Gotchas for the next agent
 
 - The ModDB scabbard-mod installer has no variant options in v1.04 (single Geralt-only build); Steam path needs `\common\`.
 - Never use Vortex for these mods.
@@ -114,3 +122,4 @@ These backups are already in a persistent workspace location; no relocation is r
 - The three in-game weight classes map to `GetCreatureAppearance` 1/2/3 and to the pa1/2/3 (back) and pl1/2/3 (belt) placement variants; all three shipped byte-identical in both mod eras, so no existing variant fits modded bodies.
 - The user plays from scratch with this mod stack (no old saves to upgrade). The automatic sword re-adding behavior was intentionally turned off in a separate thread; see the verified caveat in section 3 before attempting to reproduce or undo it.
 - The exact traced model currently has the audited vertex-only rigid `-1.25°` rotation and `-0.005` local-X centering offset; `fx_stl001_pa1.wfx` remains original. Their verified backups remain outside `Data` under `Mod Conflict Backups\Scabbard Fit Fix`.
+- The visually verified silver target has the audited vertex-only `-0.45°` planar and `-0.6°` depth rotations. Its backup is outside `Data` under `Mod Conflict Backups\Silver Scabbard Fit Fix`; the two lower-priority `ph_sv_001.mdb` copies remain unchanged.
