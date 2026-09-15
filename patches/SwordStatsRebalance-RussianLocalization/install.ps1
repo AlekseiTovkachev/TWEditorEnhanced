@@ -1,7 +1,7 @@
 #Requires -Version 7
 <#
 .SYNOPSIS
-    Applies Russian localization to an installed Sword Stats Rebalance mod
+    Applies Russian localization and Scabbard migration compatibility to Sword Stats Rebalance
     for The Witcher: Enhanced Edition.
 .DESCRIPTION
     Overwrites the 39 .uti templates shipped with this patch onto the mod
@@ -9,7 +9,8 @@
     up every replaced original first. Idempotent: re-running on an already
     patched install copies nothing. Fails before mutating anything when a
     prerequisite is missing (base mod not installed, missing target file) or
-    when a duplicate loose .uti winner exists elsewhere under Data.
+    when a duplicate loose .uti winner exists elsewhere under Data. All 33
+    sword templates also carry the Scabbard Mod's one-time migration marker.
 .PARAMETER GameRoot
     The Witcher Enhanced Edition install root. Defaults to the common
     C:\Games\The Witcher Enhanced Edition.
@@ -73,7 +74,7 @@ foreach ($entry in $patchFiles) {
 }
 
 if ($toPatch.Count -eq 0) {
-    Write-Host "All $($patchFiles.Count) templates already carry the Russian localization - nothing to do."
+    Write-Host "All $($patchFiles.Count) templates already carry the localization and compatibility data - nothing to do."
     exit 0
 }
 
@@ -101,6 +102,6 @@ foreach ($entry in $toPatch) {
     }
 }
 
-Write-Host "Patched $($toPatch.Count) template(s) with Russian descriptions ($($already.Count) were already patched)."
+Write-Host "Patched $($toPatch.Count) template(s) with Russian descriptions and compatibility data ($($already.Count) were already patched)."
 Write-Host "Originals backed up to: $backupDir"
 Write-Host "Weapon ability data (weapon_abl.lua) was not modified."

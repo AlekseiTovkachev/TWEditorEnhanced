@@ -8,6 +8,24 @@ package app.tweditor
  * English text references so the numbers render identically.
  */
 object ModRussianLocalizationData {
+    /**
+     * Sword templates migrated by the Scabbard Mod / TW3 CS compatibility scripts.
+     * The terminal marker prevents sword_load from recreating an already-migrated
+     * equipped sword on every save load and area transition.
+     */
+    val scabbardMigrationTemplates: Set<String> = setOf(
+        "it_stlswd_001",
+        "it_stlswd_008", "it_stlswd_009", "it_stlswd_010", "it_stlswd_011", "it_stlswd_012",
+        "it_stlswd_013", "it_stlswd_014", "it_stlswd_015", "it_stlswd_016",
+        "it_stlswd_bbb", "it_stlswd_bby", "it_stlswd_byy",
+        "it_stlswd_rbb", "it_stlswd_rby", "it_stlswd_rrb", "it_stlswd_rrr",
+        "it_stlswd_yrr", "it_stlswd_yyr", "it_stlswd_yyy",
+        "it_svswd_001", "it_svswd_005", "it_svswd_006",
+        "it_svswd_eee", "it_svswd_ees", "it_svswd_ess",
+        "it_svswd_mee", "it_svswd_mme", "it_svswd_mmm",
+        "it_svswd_sme", "it_svswd_smm", "it_svswd_ssm", "it_svswd_sss"
+    )
+
     val templates: List<ModTemplate> = listOf(
         ModTemplate("it_stlswd_001", "Steel swords"),
         ModTemplate("it_stlswd_008", "Steel swords"),

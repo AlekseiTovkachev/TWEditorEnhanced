@@ -4,7 +4,11 @@ Russian descriptions for the [Sword Stats Rebalance 1.3](https://www.nexusmods.c
 mod for *The Witcher: Enhanced Edition*. The mod's author could not ship Russian text
 (D'jinni corrupted the script), so the 39 item templates this mod overrides had either
 `?`-destroyed Russian text or stale pre-rebalance descriptions. This patch fills in the
-Russian `Description` field of all 39 templates.
+Russian `Description` field of all 39 templates. It also preserves the Scabbard Mod migration
+marker on all 33 sword templates used by the base Scabbard Mod and TW3 CS compatibility scripts.
+Without that marker,
+`sword_load` treats an equipped sword as unmigrated and recreates it after every save load or
+area transition.
 
 The text is built from the **official base-game Russian localization**: each description body
 is the official wording from the same template inside the game archives (`templates00.bif`),
@@ -60,14 +64,16 @@ Restores the 39 originals from the backup (digest-verified each file) and keeps 
 - `Runic swords\` — it_svswd_eee … it_svswd_sss (10 combinations)
 - `Meteorites and runestones\` — it_upgrcomp_001–006 (3 meteorite colors, 3 runes)
 
-Only the Russian `Description` substring changed in each file; abilities, prices, model
-fields, all other languages' text, and template resource names are untouched.
+Only the Russian `Description` substring and, on the 33 compatible swords, the terminal
+`miecz_nowy` tag marker differ from Sword Stats Rebalance. Abilities, prices, model fields,
+all other languages' text, and template resource names are untouched. The marker is harmless
+when the Scabbard Mod family is not installed.
 
 ## Verification history
 
 - Every patched file was re-parsed with a GFF reader after a real write/reload and matched
   the expected Russian text; the whole GFF tree was compared structurally against the
-  original (identical outside the Russian description substring).
+  original (identical outside the Russian description substring and documented marker tag).
 - One loose `.uti` winner per affected resref and exactly one `weapon_abl.lua` confirmed.
 
 ## Notes / known quirks

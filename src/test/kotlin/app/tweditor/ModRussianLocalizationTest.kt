@@ -29,6 +29,7 @@ class ModRussianLocalizationTest {
 
     private val dataDir = Path.of("C:\\Games\\The Witcher Enhanced Edition\\Data")
     private val modRoot = dataDir.resolve("Override").resolve("Swords Stats Rebalance")
+    private val patchRoot = Path.of("patches", "SwordStatsRebalance-RussianLocalization", "files", "Override", "Swords Stats Rebalance")
     private val backupRoot = Path.of(
         "C:\\Games\\The Witcher Enhanced Edition\\Mod Conflict Backups\\Swords Stats Rebalance"
     )
@@ -111,6 +112,28 @@ class ModRussianLocalizationTest {
                 expected,
                 russianDescription(topLevelFields(database)),
                 "Russian description mismatch: ${template.resref}"
+            )
+            if (template.resref in ModRussianLocalizationData.scabbardMigrationTemplates) {
+                assertTrue(
+                    topLevelFields(database).getString("Tag").split(';').any { it.trim() == "miecz_nowy" },
+                    "Scabbard migration marker missing: ${template.resref}"
+                )
+            }
+        }
+    }
+
+    @Test
+    fun packagedTemplatesPreserveScabbardMigrationMarkers() {
+        val environment = SaveSeamSupport.createEnvironment()
+        for (template in ModRussianLocalizationData.templates) {
+            val packaged = patchRoot.resolve(template.directory).resolve(template.resref + ".uti")
+            assertTrue(Files.isRegularFile(packaged), "missing packaged template: $packaged")
+            val fields = topLevelFields(loadDatabase(environment, Files.readAllBytes(packaged), template.resref))
+            val hasMarker = fields.getString("Tag").split(';').any { it.trim() == "miecz_nowy" }
+            assertEquals(
+                template.resref in ModRussianLocalizationData.scabbardMigrationTemplates,
+                hasMarker,
+                "unexpected Scabbard migration marker state: ${template.resref}"
             )
         }
     }
